@@ -1,0 +1,207 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\StoreLeadSearchRequest;
+use App\Models\Lead;
+use App\Models\LeadSearch;
+use App\Services\N8nLeadCollectionService;
+use Illuminate\Http\Request;
+
+class LeadSearchController extends Controller
+{
+    public function index(Request $request)
+    {
+        $query = LeadSearch::visibleTo(auth()->user())->withCount('leads')->orderByDesc('created_at');
+        
+        // Filters
+        if ($country = $request->input('country')) {
+            $query->where('country', 'ilike', "%{$country}%");
+        }
+        if ($city = $request->input('city')) {
+            $query->where('city', 'ilike', "%{$city}%");
+        }
+        if ($industry = $request->input('industry')) {
+            $query->where('industry', 'ilike', "%{$industry}%");
+        }
+        if ($position = $request->input('position')) {
+            $query->where('position', 'ilike', "%{$position}%");
+        }
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+        
+        if (auth()->user()->isAdmin()) {
+            if ($userId = $request->input('user_id')) {
+                $query->where('user_id', $userId);
+            }
+            $query->with('user');
+        }
+
+        // Local search by query values
+        if ($q = $request->input('q')) {
+            $query->where(function ($query) use ($q) {
+                $query->where('country', 'ilike', "%{$q}%")
+                      ->orWhere('city', 'ilike', "%{$q}%")
+                      ->orWhere('industry', 'ilike', "%{$q}%")
+                      ->orWhere('position', 'ilike', "%{$q}%");
+            });
+        }
+        
+        $searches = $query->paginate(15)->withQueryString();
+        
+        if ($request->ajax()) {
+            return view('lead-searches.partials.table', compact('searches'))->render();
+        }
+            
+        return view('lead-searches.index', compact('searches'));
+    }
+
+    public function create()
+    {
+        return view('lead-searches.create');
+    }
+
+    public function store(StoreLeadSearchRequest $request, N8nLeadCollectionService $n8nService)
+    {
+        $validated = $request->validated();
+        $previewQuery = $this->buildPreviewQuery($validated);
+
+        $targetUserId = auth()->id();
+
+        $leadSearch = LeadSearch::create([
+            'user_id' => $targetUserId,
+            'country' => $validated['country'],
+            'city' => $validated['city'],
+            'industry' => $validated['industry'] ?? null,
+            'position' => $validated['position'] ?? null,
+            'volume' => $validated['volume'] ?? 10,
+            'main_search_query' => $previewQuery,
+            'status' => 'processing',
+            'started_at' => now(),
+        ]);
+
+        $validated['user_id'] = $targetUserId;
+        $validated['lead_search_id'] = $leadSearch->id;
+
+        // Note: volume is already in $validated from StoreLeadSearchRequest
+
+        $response = $n8nService->searchLeads($validated);
+
+        if ($response['successful']) {
+            $leadSearch->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+                'n8n_response' => $response['body'],
+            ]);
+
+            return redirect()->route('lead-searches.index')->with('success', "Lead Hunter started. Leads will appear under this query as n8n scrapes them.");
+        } else {
+            $leadSearch->update([
+                'status' => 'failed',
+                'completed_at' => now(),
+                'error_message' => $response['error'],
+                'n8n_response' => $response['body'],
+            ]);
+
+            return redirect()->back()->withInput()->with('error', "Lead search failed: " . $response['error']);
+        }
+    }
+
+    /**
+     * View leads for a specific search query.
+     */
+    public function leads(Request $request, LeadSearch $leadSearch)
+    {
+        if (!auth()->user()->isAdmin() && $leadSearch->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        // Do not run orphan backfill here: unbounded ILIKE + UPDATE across the leads table
+        // can exceed PHP max_execution_time. Use `php artisan lead-search:attach-orphans {id}` if needed.
+
+        $query = Lead::where('lead_search_id', $leadSearch->id);
+
+        // Local filter/search
+        if ($q = $request->input('q')) {
+            $query->where(function ($query) use ($q) {
+                $query->where('person_name', 'ilike', "%{$q}%")
+                      ->orWhere('personal_email_address', 'ilike', "%{$q}%")
+                      ->orWhere('company_name', 'ilike', "%{$q}%")
+                      ->orWhere('personal__linkdin_url', 'ilike', "%{$q}%")
+                      ->orWhere('position_by_search_param', 'ilike', "%{$q}%")
+                      ->orWhere('position_by_apifiapi', 'ilike', "%{$q}%");
+            });
+        }
+
+        $leads = $query->orderBy('created_at', 'desc')->paginate(25)->withQueryString();
+
+        if ($request->ajax()) {
+            return view('lead-searches.partials.leads-table', compact('leads', 'leadSearch'))->render();
+        }
+
+        return view('lead-searches.leads', compact('leadSearch', 'leads'));
+    }
+
+    /**
+     * Return lead details as JSON, scoped to a search.
+     */
+    public function leadJson(LeadSearch $leadSearch, Lead $lead)
+    {
+        if (!auth()->user()->isAdmin()) {
+            if ($leadSearch->user_id !== auth()->id() || $lead->user_id !== auth()->id()) {
+                abort(403, 'Unauthorized access to this lead.');
+            }
+        }
+
+        if ($lead->lead_search_id !== $leadSearch->id) {
+            abort(404, 'Lead not found for this search.');
+        }
+
+        // Exclude internal fields
+        $hidden = ['id', 'main_search_query', 'imported_at'];
+        $data = collect($lead->toArray())->except($hidden)->toArray();
+
+        // Add formatted dates
+        $data['created_at_human'] = $lead->created_at->format('M d, Y H:i');
+        $data['updated_at_human'] = $lead->updated_at->format('M d, Y H:i');
+
+        return response()->json($data);
+    }
+
+    private function buildPreviewQuery(array $data): string
+    {
+        $positionBlock = '';
+        if (!empty($data['position'])) {
+            if (str_contains($data['position'], ' OR ')) {
+                $positionBlock = "({$data['position']}) ";
+            } else {
+                $positionBlock = "(\"{$data['position']}\") ";
+            }
+        }
+
+        $cityBlock = "(\"{$data['city']}\" OR \"{$data['city']} Bay Area\") ";
+        $countryBlock = "\"{$data['country']}\" ";
+        
+        $industryBlock = '';
+        if (!empty($data['industry'])) {
+            $industryBlock = "(\"{$data['industry']}\")";
+        }
+
+        return trim("site:linkedin.com/in/ {$positionBlock}{$cityBlock}{$countryBlock}{$industryBlock}");
+    }
+
+    public function destroy(LeadSearch $leadSearch)
+    {
+        if (!auth()->user()->isAdmin() && $leadSearch->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        // Associated leads should be deleted. 
+        // If we want to be explicit instead of relying on cascade:
+        $leadSearch->leads()->delete();
+        $leadSearch->delete();
+
+        return back()->with('success', 'Search record and associated leads deleted successfully.');
+    }
+}
