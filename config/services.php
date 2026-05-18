@@ -41,4 +41,9 @@ return [
         'timeout' => env('N8N_HTTP_TIMEOUT', 300),
     ],
 
+    'maton' => [
+        'base_url' => env('MATON_BASE_URL', 'https://api.maton.ai'),
+        'api_key' => env('MATON_API_KEY'),
+    ],
+
 ];

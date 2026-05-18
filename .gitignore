@@ -1,3 +1,5 @@
+.github
+/Project Specification Document.md
 *.log
 .DS_Store
 .env

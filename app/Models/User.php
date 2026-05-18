@@ -3,7 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
+use App\Models\ConnectedMailbox;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -67,6 +67,11 @@ class User extends Authenticatable
     public function senderIdentities()
     {
         return $this->hasMany(SenderIdentity::class);
+    }
+
+    public function connectedMailboxes()
+    {
+        return $this->hasMany(ConnectedMailbox::class);
     }
 
     public function csvImports()

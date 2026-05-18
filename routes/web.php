@@ -7,9 +7,12 @@ use App\Http\Controllers\LeadSearchController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CampaignFromLeadSearchController;
 use App\Http\Controllers\CampaignAutomationController;
-use App\Http\Controllers\EmailTemplateController;
+// use App\Http\Controllers\EmailTemplateController;
+use App\Http\Controllers\MatonConnectionController;
 use App\Http\Controllers\SenderIdentityController;
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\SettingsTemplateController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -52,16 +55,16 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     Route::get('/campaigns/{campaign}', [CampaignController::class, 'show'])->name('campaigns.show');
     
     // Settings - Email Templates & Signatures CRUD
-    Route::get('/settings/templates', [\App\Http\Controllers\SettingsTemplateController::class, 'index'])->name('settings.templates');
-    Route::post('/settings/templates/body', [\App\Http\Controllers\SettingsTemplateController::class, 'storeBody'])->name('settings.templates.body.store');
-    Route::put('/settings/templates/body/{template}', [\App\Http\Controllers\SettingsTemplateController::class, 'updateBody'])->name('settings.templates.body.update');
-    Route::delete('/settings/templates/body/{template}', [\App\Http\Controllers\SettingsTemplateController::class, 'destroyBody'])->name('settings.templates.body.destroy');
-    Route::post('/settings/templates/body/{template}/default', [\App\Http\Controllers\SettingsTemplateController::class, 'setDefaultBody'])->name('settings.templates.body.default');
+    Route::get('/settings/templates', [SettingsTemplateController::class, 'index'])->name('settings.templates');
+    Route::post('/settings/templates/body', [SettingsTemplateController::class, 'storeBody'])->name('settings.templates.body.store');
+    Route::put('/settings/templates/body/{template}', [SettingsTemplateController::class, 'updateBody'])->name('settings.templates.body.update');
+    Route::delete('/settings/templates/body/{template}', [SettingsTemplateController::class, 'destroyBody'])->name('settings.templates.body.destroy');
+    Route::post('/settings/templates/body/{template}/default', [SettingsTemplateController::class, 'setDefaultBody'])->name('settings.templates.body.default');
 
-    Route::post('/settings/templates/signature', [\App\Http\Controllers\SettingsTemplateController::class, 'storeSignature'])->name('settings.templates.signature.store');
-    Route::put('/settings/templates/signature/{signature}', [\App\Http\Controllers\SettingsTemplateController::class, 'updateSignature'])->name('settings.templates.signature.update');
-    Route::delete('/settings/templates/signature/{signature}', [\App\Http\Controllers\SettingsTemplateController::class, 'destroySignature'])->name('settings.templates.signature.destroy');
-    Route::post('/settings/templates/signature/{signature}/default', [\App\Http\Controllers\SettingsTemplateController::class, 'setDefaultSignature'])->name('settings.templates.signature.default');
+    Route::post('/settings/templates/signature', [SettingsTemplateController::class, 'storeSignature'])->name('settings.templates.signature.store');
+    Route::put('/settings/templates/signature/{signature}', [SettingsTemplateController::class, 'updateSignature'])->name('settings.templates.signature.update');
+    Route::delete('/settings/templates/signature/{signature}', [SettingsTemplateController::class, 'destroySignature'])->name('settings.templates.signature.destroy');
+    Route::post('/settings/templates/signature/{signature}/default', [SettingsTemplateController::class, 'setDefaultSignature'])->name('settings.templates.signature.default');
 
     // Settings - Sender Identities CRUD
     Route::get('/settings/senders', [SenderIdentityController::class, 'index'])->name('settings.senders');
@@ -69,6 +72,20 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     Route::put('/settings/senders/{sender}', [SenderIdentityController::class, 'update'])->name('settings.senders.update');
     Route::delete('/settings/senders/{sender}', [SenderIdentityController::class, 'destroy'])->name('settings.senders.destroy');
     Route::post('/settings/senders/{sender}/default', [SenderIdentityController::class, 'setDefault'])->name('settings.senders.default');
+
+    // Maton BYOE mailbox settings page
+    Route::get('/settings/mailboxes', function (Request $request) {
+        $connectedMailboxes = $request->user()
+            ->connectedMailboxes()
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('settings.mailboxes', compact('connectedMailboxes'));
+    })->name('settings.mailboxes');
+
+    // Maton BYOE mailbox connection
+    Route::post('/mailboxes/connections', [MatonConnectionController::class, 'createConnection'])
+        ->name('mailboxes.connections.create');
 });
 
 Route::middleware('auth')->group(function () {
