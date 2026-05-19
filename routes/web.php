@@ -86,6 +86,8 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     // Maton BYOE mailbox connection
     Route::post('/mailboxes/connections', [MatonConnectionController::class, 'createConnection'])
         ->name('mailboxes.connections.create');
+    Route::post('/mailboxes/connections/verify', [MatonConnectionController::class, 'verifyConnection'])
+        ->name('mailboxes.connections.verify');
 });
 
 Route::middleware('auth')->group(function () {

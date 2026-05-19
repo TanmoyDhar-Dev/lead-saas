@@ -16,35 +16,54 @@
             return this.connectedMailboxes.some((mailbox) => mailbox.provider === provider && mailbox.status === 'active');
         },
 
+        setConnectedState(provider, connected) {
+            this.connectedMailboxes = this.connectedMailboxes.map((mailbox) => {
+                if (mailbox.provider !== provider) {
+                    return mailbox;
+                }
+
+                return {
+                    ...mailbox,
+                    status: connected ? 'active' : 'disconnected',
+                };
+            });
+        },
+
         async connect(provider) {
             this.loadingProvider = provider;
             this.errorMessage = '';
+
+            // Open window synchronously to avoid popup blockers and main-window navigation glitches
+            const popup = window.open('', '_blank', 'noopener,noreferrer,width=600,height=780');
 
             try {
                 const response = await window.axios.post('{{ route('mailboxes.connections.create') }}', { provider });
                 const authUrl = response?.data?.auth_url;
 
                 if (!authUrl) {
+                    if (popup) popup.close();
                     throw new Error('No authorization URL returned by Maton.');
                 }
 
-                const popup = window.open(authUrl, '_blank', 'noopener,noreferrer,width=600,height=780');
-
-                if (!popup) {
-                    window.location.href = authUrl;
-                    return;
+                if (popup) {
+                    popup.location.href = authUrl;
+                } else {
+                    // Fallback if blocked
+                    window.open(authUrl, '_blank', 'noopener,noreferrer,width=600,height=780');
                 }
 
-                const returnUrl = '{{ route('settings.mailboxes') }}';
                 const poll = window.setInterval(() => {
-                    if (popup.closed) {
+                    if (popup && popup.closed) {
                         window.clearInterval(poll);
-                        window.location.href = returnUrl;
+                        this.verify(provider, null, null);
+                        return;
                     }
-                }, 700);
+
+                    this.verify(provider, popup, poll);
+                }, 1500);
 
                 window.setTimeout(() => {
-                    if (!popup.closed) {
+                    if (popup && !popup.closed) {
                         popup.focus();
                     }
                 }, 300);
@@ -52,6 +71,32 @@
                 this.errorMessage = error?.response?.data?.message ?? 'Unable to start the mailbox connection.';
             } finally {
                 this.loadingProvider = null;
+            }
+        },
+
+        async verify(provider, popup = null, poll = null) {
+            try {
+                const response = await window.axios.post('{{ route('mailboxes.connections.verify') }}', { provider });
+                
+                if (response?.data?.connected) {
+                    this.setConnectedState(provider, true);
+                    
+                    if (poll) {
+                        window.clearInterval(poll);
+                    }
+
+                    if (popup && !popup.closed) {
+                        popup.close();
+                    }
+
+                    window.location.reload();
+                } else if (!popup && !poll) {
+                    // Final check after popup closed manually
+                    this.setConnectedState(provider, false);
+                    this.errorMessage = 'Connection was cancelled or not completed.';
+                }
+            } catch (error) {
+                this.errorMessage = error?.response?.data?.message ?? 'Unable to verify mailbox connection.';
             }
         }
     }">

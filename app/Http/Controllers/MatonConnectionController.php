@@ -78,12 +78,13 @@ class MatonConnectionController extends Controller
                 [
                     'email_address' => $payload['email_address'] ?? null,
                     'maton_connection_id' => $connectionId,
-                    'status' => ConnectedMailbox::STATUS_ACTIVE,
+                    'status' => ConnectedMailbox::STATUS_DISCONNECTED,
                 ]
             );
 
             return response()->json([
                 'auth_url' => $authUrl,
+                'connection_id' => $connectionId,
             ]);
         } catch (Throwable $e) {
             Log::error('Maton createConnection exception.', [
@@ -94,6 +95,94 @@ class MatonConnectionController extends Controller
             return response()->json([
                 'message' => 'Unable to create mailbox connection at this time.',
             ], 500);
+        }
+    }
+
+    public function verifyConnection(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'provider' => ['required', 'string', Rule::in([
+                ConnectedMailbox::PROVIDER_GOOGLE_MAIL,
+                ConnectedMailbox::PROVIDER_OUTLOOK,
+            ])],
+        ]);
+
+        $mailbox = ConnectedMailbox::query()
+            ->where('user_id', $request->user()->id)
+            ->where('provider', $validated['provider'])
+            ->first();
+
+        if (! $mailbox || ! $mailbox->maton_connection_id) {
+            return response()->json([
+                'connected' => false,
+                'status' => 'disconnected',
+            ]);
+        }
+
+        $apiKey = config('services.maton.api_key');
+        if (! $apiKey) {
+            return response()->json([
+                'message' => 'Maton API key is not configured.',
+            ], 500);
+        }
+
+        $baseUrl = rtrim(config('services.maton.base_url', 'https://api.maton.ai'), '/');
+
+        try {
+            $response = Http::timeout(20)
+                ->acceptJson()
+                ->withToken($apiKey)
+                ->get($baseUrl . '/connections/' . $mailbox->maton_connection_id);
+
+            if (! $response->successful()) {
+                Log::warning('Maton connection verification failed.', [
+                    'status' => $response->status(),
+                    'connection_id' => $mailbox->maton_connection_id,
+                    'user_id' => $request->user()->id,
+                ]);
+
+                return response()->json([
+                    'connected' => false,
+                    'status' => $mailbox->status,
+                ]);
+            }
+
+            $payload = $response->json() ?? [];
+            $remoteStatus = strtoupper((string) (data_get($payload, 'connection.status')
+                ?? data_get($payload, 'status')
+                ?? data_get($payload, 'data.status')
+                ?? ''));
+
+            $remoteUrl = data_get($payload, 'connection.url')
+                ?? data_get($payload, 'url')
+                ?? data_get($payload, 'data.url')
+                ?? data_get($payload, 'connection.auth_url')
+                ?? data_get($payload, 'auth_url');
+
+            $isConnected = in_array($remoteStatus, ['ACTIVE', 'CONNECTED', 'OK'], true);
+
+            $mailbox->update([
+                'email_address' => data_get($payload, 'connection.metadata.email_address')
+                    ?? data_get($payload, 'email_address')
+                    ?? $mailbox->email_address,
+                'status' => $isConnected ? ConnectedMailbox::STATUS_ACTIVE : ConnectedMailbox::STATUS_DISCONNECTED,
+            ]);
+
+            return response()->json([
+                'connected' => $isConnected,
+                'status' => $mailbox->status,
+            ]);
+        } catch (Throwable $e) {
+            Log::warning('Maton connection verification exception.', [
+                'message' => $e->getMessage(),
+                'connection_id' => $mailbox->maton_connection_id,
+                'user_id' => $request->user()->id,
+            ]);
+
+            return response()->json([
+                'connected' => false,
+                'status' => $mailbox->status,
+            ]);
         }
     }
 
