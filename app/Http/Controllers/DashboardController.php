@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Lead;
 use App\Models\LeadSearch;
-use App\Models\Campaign;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -19,8 +18,6 @@ class DashboardController extends Controller
                 'total_users' => User::count(),
                 'total_leads' => Lead::count(),
                 'total_searches' => LeadSearch::count(),
-                'total_campaigns' => Campaign::count(),
-                'emails_sent' => 0, // Placeholder
             ];
             
             $latestLeads = Lead::with('user')->orderByDesc('created_at')->take(5)->get();
@@ -32,8 +29,6 @@ class DashboardController extends Controller
         $stats = [
             'total_leads' => Lead::where('user_id', $user->id)->count(),
             'total_searches' => LeadSearch::where('user_id', $user->id)->count(),
-            'total_campaigns' => Campaign::where('user_id', $user->id)->count(),
-            'emails_sent' => 0, // Placeholder
         ];
         
         $latestLeads = Lead::where('user_id', $user->id)->orderByDesc('created_at')->take(5)->get();

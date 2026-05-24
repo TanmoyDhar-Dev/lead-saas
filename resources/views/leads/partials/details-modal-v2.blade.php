@@ -41,14 +41,14 @@
             <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
                 <div class="flex items-center">
                     <div class="w-14 h-14 rounded-2xl bg-brand-blue flex items-center justify-center text-white font-bold text-xl mr-5 shadow-lg shadow-blue-500/20">
-                        <span x-text="modalData?.person_name?.charAt(0) || '?'"></span>
+                        <span x-text="modalData?.full_name?.charAt(0) || '?'"></span>
                     </div>
                     <div>
-                        <h3 class="text-xl font-bold text-slate-800" x-text="modalData?.person_name || 'Unknown Lead'"></h3>
+                        <h3 class="text-xl font-bold text-slate-800" x-text="modalData?.full_name || 'Unknown Lead'"></h3>
                         <div class="flex items-center text-xs text-slate-400 font-medium mt-0.5">
                             <span class="text-brand-blue font-bold mr-2 uppercase tracking-wide" x-text="modalData?.company_name || 'No Company'"></span>
                             <span class="mx-2">•</span>
-                            <span x-text="modalData?.position_by_apifiapi || modalData?.position_by_search_param || 'No Position'"></span>
+                            <span x-text="modalData?.job_title || modalData?.position || 'No Position'"></span>
                         </div>
                     </div>
                 </div>
@@ -102,6 +102,22 @@
                         </div>
                     </div>
 
+                    {{-- Section 3: Location --}}
+                    <div>
+                        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center">
+                            <span class="w-8 h-px bg-slate-200 mr-3"></span>
+                            Location
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <template x-for="field in getSectionFields('location')" :key="field.key">
+                                <div class="bg-slate-50/50 border border-slate-100 rounded-xl p-4 transition-all">
+                                    <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5" x-text="field.label"></label>
+                                    <p class="text-xs font-medium text-slate-700 leading-relaxed break-words" x-text="field.value || 'Not available'"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
                     {{-- Section 3: Search & Enrichment --}}
                     <div>
                         <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center">
@@ -139,8 +155,8 @@
             {{-- Footer --}}
             <div class="p-6 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end shrink-0">
                 <div class="flex space-x-3">
-                    <template x-if="modalData?.personal__linkdin_url">
-                        <a :href="modalData.personal__linkdin_url" target="_blank" class="bg-[#0077b5] text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center shadow-lg shadow-blue-500/10 hover:brightness-110 transition-all uppercase tracking-wide">
+                    <template x-if="modalData?.linkedin_url">
+                        <a :href="modalData.linkedin_url" target="_blank" class="bg-[#0077b5] text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center shadow-lg shadow-blue-500/10 hover:brightness-110 transition-all uppercase tracking-wide">
                             LinkedIn Profile
                         </a>
                     </template>

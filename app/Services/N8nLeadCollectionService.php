@@ -23,11 +23,11 @@ class N8nLeadCollectionService
         }
 
         try {
-            $response = Http::timeout($timeout)
+            $response = Http::withoutVerifying()
+                ->timeout($timeout)
                 ->retry(2, 2000)
                 ->post($webhookUrl, [
-                    'country'        => $data['country'],
-                    'city'           => $data['city'],
+                    'location'       => $data['target_location'],
                     'industry'       => $data['industry'] ?? null,
                     'position'       => $data['position'] ?? null,
                     'volume'         => $data['volume'] ?? 10,

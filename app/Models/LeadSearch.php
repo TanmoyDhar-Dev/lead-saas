@@ -18,24 +18,20 @@ class LeadSearch extends Model
 
     protected $fillable = [
         'user_id',
-        'country',
-        'city',
+        'target_location',
         'industry',
         'position',
         'volume',
-        'main_search_query',
         'status',
-        'n8n_response',
-        'error_message',
-        'started_at',
+        'processing_started_at',
         'completed_at',
+        'error_message',
     ];
 
     protected $casts = [
-        'n8n_response'  => 'array',
-        'started_at'    => 'datetime',
-        'completed_at'  => 'datetime',
-        'volume'        => 'integer',
+        'processing_started_at' => 'datetime',
+        'completed_at'          => 'datetime',
+        'volume'                => 'integer',
     ];
 
     public function user()
@@ -54,55 +50,5 @@ class LeadSearch extends Model
             return $query;
         }
         return $query->where('user_id', $user->id);
-    }
-
-    /**
-     * Leads that likely belong to this search but were never tagged with lead_search_id.
-     * Used only by bounded batch tools (never run unbounded on a web request).
-     */
-    public function orphanLeadsQuery(): Builder
-    {
-        $startTime = $this->started_at ?? $this->created_at;
-
-        $query = Lead::query()
-            ->whereNull('lead_search_id')
-            ->where('user_id', $this->user_id)
-            ->where('country_by_search_param', 'ilike', '%'.$this->country.'%')
-            ->where('city_by_search_param', 'ilike', '%'.$this->city.'%')
-            ->where('created_at', '>=', $startTime->copy()->subMinutes(10))
-            ->where('created_at', '<=', $startTime->copy()->addMinutes(60));
-
-        if (! empty($this->industry)) {
-            $query->where('industry_by_search_param', 'ilike', '%'.$this->industry.'%');
-        }
-
-        if (! empty($this->position)) {
-            $query->where('position_by_search_param', 'ilike', '%'.$this->position.'%');
-        }
-
-        return $query;
-    }
-
-    /**
-     * Attach up to $maxRows orphan leads to this search (single bounded UPDATE).
-     */
-    public function attachOrphanLeads(int $maxRows = 250): int
-    {
-        $maxRows = max(1, min($maxRows, 5000));
-
-        $ids = $this->orphanLeadsQuery()
-            ->orderBy('created_at')
-            ->limit($maxRows)
-            ->pluck('id');
-
-        if ($ids->isEmpty()) {
-            return 0;
-        }
-
-        return Lead::whereIn('id', $ids)->update([
-            'lead_search_id' => $this->id,
-            'source' => DB::raw("COALESCE(source, 'n8n_search')"),
-            'updated_at' => now(),
-        ]);
     }
 }

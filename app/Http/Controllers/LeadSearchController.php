@@ -15,11 +15,8 @@ class LeadSearchController extends Controller
         $query = LeadSearch::visibleTo(auth()->user())->withCount('leads')->orderByDesc('created_at');
         
         // Filters
-        if ($country = $request->input('country')) {
-            $query->where('country', 'ilike', "%{$country}%");
-        }
-        if ($city = $request->input('city')) {
-            $query->where('city', 'ilike', "%{$city}%");
+        if ($targetLocation = $request->input('target_location')) {
+            $query->where('target_location', 'ilike', "%{$targetLocation}%");
         }
         if ($industry = $request->input('industry')) {
             $query->where('industry', 'ilike', "%{$industry}%");
@@ -41,8 +38,7 @@ class LeadSearchController extends Controller
         // Local search by query values
         if ($q = $request->input('q')) {
             $query->where(function ($query) use ($q) {
-                $query->where('country', 'ilike', "%{$q}%")
-                      ->orWhere('city', 'ilike', "%{$q}%")
+                $query->where('target_location', 'ilike', "%{$q}%")
                       ->orWhere('industry', 'ilike', "%{$q}%")
                       ->orWhere('position', 'ilike', "%{$q}%");
             });
@@ -62,21 +58,32 @@ class LeadSearchController extends Controller
         return view('lead-searches.create');
     }
 
-    public function store(StoreLeadSearchRequest $request, N8nLeadCollectionService $n8nService)
+    public function store(Request $request, N8nLeadCollectionService $n8nService)
     {
-        $validated = $request->validated();
-        $previewQuery = $this->buildPreviewQuery($validated);
+        $validated = $request->validate([
+            'target_location' => 'required|string|max:255',
+            'industry' => 'nullable|string|max:255',
+            'position' => 'nullable|string|max:255',
+            'volume' => 'required|integer|min:1|max:100',
+        ]);
+        
+        // Normalize fields to lowercase
+        $validated['target_location'] = mb_strtolower(trim($validated['target_location']));
+        if (!empty($validated['industry'])) {
+            $validated['industry'] = mb_strtolower(trim($validated['industry']));
+        }
+        if (!empty($validated['position'])) {
+            $validated['position'] = mb_strtolower(trim($validated['position']));
+        }
 
         $targetUserId = auth()->id();
 
         $leadSearch = LeadSearch::create([
             'user_id' => $targetUserId,
-            'country' => $validated['country'],
-            'city' => $validated['city'],
+            'target_location' => $validated['target_location'],
             'industry' => $validated['industry'] ?? null,
             'position' => $validated['position'] ?? null,
             'volume' => $validated['volume'] ?? 10,
-            'main_search_query' => $previewQuery,
             'status' => 'processing',
             'started_at' => now(),
         ]);
@@ -84,27 +91,30 @@ class LeadSearchController extends Controller
         $validated['user_id'] = $targetUserId;
         $validated['lead_search_id'] = $leadSearch->id;
 
-        // Note: volume is already in $validated from StoreLeadSearchRequest
-
         $response = $n8nService->searchLeads($validated);
 
         if ($response['successful']) {
             $leadSearch->update([
                 'status' => 'completed',
                 'completed_at' => now(),
-                'n8n_response' => $response['body'],
             ]);
 
-            return redirect()->route('lead-searches.index')->with('success', "Lead Hunter started. Leads will appear under this query as n8n scrapes them.");
+            return response()->json([
+                'success' => true,
+                'message' => 'Lead Hunter finished processing. Leads will appear under this query.',
+                'redirect' => route('lead-searches.index')
+            ]);
         } else {
             $leadSearch->update([
                 'status' => 'failed',
                 'completed_at' => now(),
-                'error_message' => $response['error'],
-                'n8n_response' => $response['body'],
+                'error_message' => $response['error'] ?? 'Unknown error',
             ]);
 
-            return redirect()->back()->withInput()->with('error', "Lead search failed: " . $response['error']);
+            return response()->json([
+                'success' => false,
+                'error' => "Lead search failed: " . ($response['error'] ?? 'Unknown error')
+            ], 422);
         }
     }
 
@@ -125,12 +135,12 @@ class LeadSearchController extends Controller
         // Local filter/search
         if ($q = $request->input('q')) {
             $query->where(function ($query) use ($q) {
-                $query->where('person_name', 'ilike', "%{$q}%")
-                      ->orWhere('personal_email_address', 'ilike', "%{$q}%")
+                $query->where('full_name', 'ilike', "%{$q}%")
+                      ->orWhere('personal_email', 'ilike', "%{$q}%")
+                      ->orWhere('company_email', 'ilike', "%{$q}%")
                       ->orWhere('company_name', 'ilike', "%{$q}%")
-                      ->orWhere('personal__linkdin_url', 'ilike', "%{$q}%")
-                      ->orWhere('position_by_search_param', 'ilike', "%{$q}%")
-                      ->orWhere('position_by_apifiapi', 'ilike', "%{$q}%");
+                      ->orWhere('linkedin_url', 'ilike', "%{$q}%")
+                      ->orWhere('position', 'ilike', "%{$q}%");
             });
         }
 
@@ -159,7 +169,7 @@ class LeadSearchController extends Controller
         }
 
         // Exclude internal fields
-        $hidden = ['id', 'main_search_query', 'imported_at'];
+        $hidden = ['id'];
         $data = collect($lead->toArray())->except($hidden)->toArray();
 
         // Add formatted dates

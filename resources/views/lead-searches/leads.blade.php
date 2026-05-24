@@ -286,29 +286,37 @@
                     
                     const sections = {
                         person: [
-                            { label: 'Person Name', key: 'person_name' },
-                            { label: 'Email', key: 'personal_email_address' },
-                            { label: 'LinkedIn URL', key: 'personal__linkdin_url', isUrl: true },
-                            { label: 'LinkedIn Bio', key: 'personal_linkdin_bio' },
-                            { label: 'Profile About', key: 'personal_profile_about' },
-                            { label: 'Personal Address', key: 'personal_address_with_country' }
+                            { label: 'Full Name', key: 'full_name' },
+                            { label: 'Job Title', key: 'job_title' },
+                            { label: 'Position', key: 'position' },
+                            { label: 'Address', key: 'address' },
+                            { label: 'Bio', key: 'bio' },
+                            { label: 'LinkedIn URL', key: 'linkedin_url', isUrl: true },
+                            { label: 'Personal Email', key: 'personal_email' },
+                            { label: 'Company Email', key: 'company_email' }
                         ],
                         company: [
                             { label: 'Company Name', key: 'company_name' },
-                            { label: 'Company Address', key: 'company_address' },
-                            { label: 'Company Website', key: 'company_website', isUrl: true },
-                            { label: 'Company LinkedIn', key: 'company_linkdin_url', isUrl: true }
+                            { label: 'Industry', key: 'industry' },
+                            { label: 'Website', key: 'company_website', isUrl: true },
+                            { label: 'LinkedIn', key: 'company_linkedin', isUrl: true },
+                            { label: 'Domain', key: 'company_domain' },
+                            { label: 'Description', key: 'company_description' },
+                            { label: 'Revenue', key: 'company_annual_revenue' },
+                            { label: 'Funding', key: 'company_total_funding' },
+                            { label: 'Technology', key: 'company_technology' }
+                        ],
+                        location: [
+                            { label: 'City', key: 'company_city' },
+                            { label: 'State', key: 'company_state' },
+                            { label: 'Country', key: 'company_country' },
+                            { label: 'Address', key: 'company_address' }
                         ],
                         search: [
-                            { label: 'Country', key: 'country_by_search_param' },
-                            { label: 'City', key: 'city_by_search_param' },
-                            { label: 'Industry (Search)', key: 'industry_by_search_param' },
-                            { label: 'Industry (API)', key: 'industry_by_apifyapi' },
-                            { label: 'Position (Search)', key: 'position_by_search_param' },
-                            { label: 'Position (API)', key: 'position_by_apifiapi' }
+                            { label: 'Position', key: 'position' },
+                            { label: 'Industry', key: 'industry' }
                         ],
                         status: [
-                            { label: 'Email Status', key: 'email_sent' },
                             { label: 'Added At', key: 'created_at_human' },
                             { label: 'Last Updated', key: 'updated_at_human' }
                         ]

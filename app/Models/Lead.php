@@ -18,46 +18,34 @@ class Lead extends Model
 
     protected $fillable = [
         'user_id',
-        'main_search_query',
-        'country_by_search_param',
-        'city_by_search_param',
-        'person_name',
-        'personal__linkdin_url',
-        'personal_linkdin_bio',
-        'personal_profile_about',
-        'personal_address_with_country',
-        'position_by_search_param',
-        'position_by_apifiapi',
-        'personal_email_address',
-        'industry_by_search_param',
-        'industry_by_apifyapi',
-        'company_name',
-        'company_address',
-        'company_website',
-        'company_linkdin_url',
-        'email_sent',
-        'source',
-        'imported_at',
         'lead_search_id',
+        'full_name',
+        'job_title',
+        'position',
+        'address',
+        'bio',
+        'linkedin_url',
+        'personal_email',
+        'company_email',
+        'industry',
+        'company_name',
+        'company_website',
+        'company_linkedin',
+        'company_city',
+        'company_country',
+        'company_address',
+        'company_state',
+        'company_domain',
+        'company_description',
+        'company_annual_revenue',
+        'company_total_funding',
+        'company_technology',
     ];
 
-    protected $casts = [
-        'imported_at' => 'datetime',
-    ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function campaignRecipients()
-    {
-        return $this->hasMany(CampaignRecipient::class);
-    }
-
-    public function leadAutomationDetails()
-    {
-        return $this->hasMany(LeadAutomationDetail::class);
     }
 
     public function leadSearch()

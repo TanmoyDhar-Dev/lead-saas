@@ -18,7 +18,7 @@
                 <tr class="hover:bg-slate-50 transition-colors group">
                     <td class="px-6 py-4">
                         @php
-                            $date = $search->started_at ?? $search->created_at;
+                            $date = $search->processing_started_at ?? $search->created_at;
                         @endphp
                         <div class="text-sm font-medium text-slate-800">{{ $date->format('M d, Y') }}</div>
                         <div class="text-[10px] text-slate-400">{{ $date->format('h:i A') }}</div>
@@ -42,10 +42,10 @@
 
                     <td class="px-6 py-4">
                         @php
-                            $location = trim(($search->city ? $search->city . ', ' : '') . $search->country);
+                            $location = trim($search->target_location);
                             if (empty($location)) $location = 'Not specified';
                         @endphp
-                        <div class="text-sm text-slate-700 font-semibold">{{ $location }}</div>
+                        <div class="text-sm text-slate-700 font-semibold uppercase">{{ $location }}</div>
                     </td>
 
                     <td class="px-6 py-4">

@@ -24,15 +24,6 @@
                     <x-nav-link :href="route('lead-searches.index')" :active="request()->routeIs('lead-searches.index')">
                         {{ __('Search History') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('campaigns.index')" :active="request()->routeIs('campaigns.*')">
-                        {{ __('Campaigns') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('settings.templates')" :active="request()->routeIs('settings.templates')">
-                        {{ __('Templates') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('settings.senders')" :active="request()->routeIs('settings.senders')">
-                        {{ __('Senders') }}
-                    </x-nav-link>
 
                     @if(Auth::user()->isAdmin())
                         <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
@@ -102,15 +93,6 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('lead-searches.index')" :active="request()->routeIs('lead-searches.index')">
                 {{ __('Search History') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('campaigns.index')" :active="request()->routeIs('campaigns.*')">
-                {{ __('Campaigns') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('settings.templates')" :active="request()->routeIs('settings.templates')">
-                {{ __('Templates') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('settings.senders')" :active="request()->routeIs('settings.senders')">
-                {{ __('Senders') }}
             </x-responsive-nav-link>
 
             @if(Auth::user()->isAdmin())

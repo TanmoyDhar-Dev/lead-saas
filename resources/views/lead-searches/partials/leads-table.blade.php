@@ -3,75 +3,88 @@
         <table class="w-full text-left border-collapse min-w-[1000px]">
             <thead>
                 <tr class="bg-slate-50/50 border-b border-slate-100">
-                    <th class="px-6 py-5 w-10">
+                    <th class="px-6 py-5 sticky left-0 z-10 bg-slate-50/90 backdrop-blur border-b border-r border-slate-100 w-10">
                         <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" class="w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
                     </th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-64">Person Name</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-56">Email</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Position</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-48">Location</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-32">LinkedIn</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center w-24">Status</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-24">Actions</th>
+                    <th class="px-6 py-5 sticky left-10 z-10 bg-slate-50/90 backdrop-blur border-b border-r border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-56 whitespace-nowrap">Full Name</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Job Title</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Position</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Address</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Bio</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">LinkedIn</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Personal Email</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Email</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Industry</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Name</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Website</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company LinkedIn</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company City</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Country</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Address</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company State</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Domain</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Description</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Annual Revenue</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Total Funding</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Technology</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap sticky right-0 z-10 bg-slate-50/90 backdrop-blur border-b border-l border-slate-100">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($leads as $lead)
                 <tr class="hover:bg-slate-50 transition-colors group cursor-pointer" @click="openModal('{{ $lead->id }}')">
-                    <td class="px-6 py-4" @click.stop>
+                    <td class="px-6 py-4 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-100" @click.stop>
                         <input type="checkbox" value="{{ $lead->id }}" x-model="selectedIds" @change="updateSelectAllState()" class="lead-checkbox w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4 sticky left-10 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-100 min-w-[200px]">
                         <div class="flex items-center">
                             <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs mr-3 border border-slate-200 shrink-0">
-                                {{ substr($lead->person_name ?: '?', 0, 1) }}
+                                {{ substr($lead->full_name ?: '?', 0, 1) }}
                             </div>
                             <button type="button" @click.stop="openModal('{{ $lead->id }}')"
-                                    class="text-sm font-bold text-brand-blue hover:underline text-left leading-tight">
-                                {{ $lead->person_name ?: 'Unknown' }}
+                                    class="text-sm font-bold text-brand-blue hover:underline text-left leading-tight whitespace-nowrap">
+                                {{ $lead->full_name ?: 'Unknown' }}
                             </button>
                         </div>
                     </td>
-                    <td class="px-6 py-4">
-                        <div class="text-xs font-medium text-slate-700">
-                            {{ $lead->personal_email_address ?: 'Not available' }}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="text-xs font-medium text-slate-700 leading-normal" title="{{ $lead->position_by_apifiapi ?: $lead->position_by_search_param }}">
-                            {{ $lead->position_by_apifiapi ?: ($lead->position_by_search_param ?: 'Not available') }}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        @php
-                            $city = $lead->city_by_search_param;
-                            $country = $lead->country_by_search_param;
-                            if (str_starts_with($country, 'site:')) $country = '';
-                            $loc = trim(($city ? $city . ', ' : '') . $country);
-                            if (empty($loc)) $loc = 'Not available';
-                        @endphp
-                        <div class="text-[10px] text-slate-500">
-                            {{ $loc }}
-                        </div>
-                    </td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->job_title ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->position ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap max-w-[200px] truncate" title="{{ $lead->address }}">{{ $lead->address ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap max-w-[200px] truncate" title="{{ $lead->bio }}">{{ $lead->bio ?: '-' }}</div></td>
                     <td class="px-6 py-4" @click.stop>
-                        @if($lead->personal__linkdin_url)
-                        <a href="{{ $lead->personal__linkdin_url }}" target="_blank" class="text-[10px] text-brand-blue font-bold hover:underline flex items-center">
-                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
-                            Profile
+                        @if($lead->linkedin_url)
+                        <a href="{{ $lead->linkedin_url }}" target="_blank" class="text-[10px] text-brand-blue font-bold hover:underline flex items-center whitespace-nowrap">
+                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg> Profile
                         </a>
                         @else
-                        <span class="text-[10px] text-slate-300">No URL</span>
+                        <span class="text-[10px] text-slate-300">-</span>
                         @endif
                     </td>
-                    <td class="px-6 py-4 text-center">
-                        @if($lead->email_sent && $lead->email_sent !== 'no operation yet')
-                            <span class="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-emerald-100">SENT</span>
-                        @else
-                            <span class="bg-slate-50 text-slate-400 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-slate-100">QUEUED</span>
-                        @endif
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->personal_email ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_email ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->industry ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_name ?: '-' }}</div></td>
+                    <td class="px-6 py-4">
+                        @if($lead->company_website)
+                        <a href="{{ Str::startsWith($lead->company_website, 'http') ? $lead->company_website : 'https://'.$lead->company_website }}" target="_blank" class="text-[10px] text-brand-blue hover:underline whitespace-nowrap" @click.stop>{{ $lead->company_website }}</a>
+                        @else <span class="text-[10px] text-slate-300">-</span> @endif
                     </td>
-                    <td class="px-6 py-4 text-right" @click.stop>
+                    <td class="px-6 py-4">
+                        @if($lead->company_linkedin)
+                        <a href="{{ $lead->company_linkedin }}" target="_blank" class="text-[10px] text-brand-blue hover:underline whitespace-nowrap" @click.stop>Company LinkedIn</a>
+                        @else <span class="text-[10px] text-slate-300">-</span> @endif
+                    </td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_city ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_country ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap max-w-[200px] truncate" title="{{ $lead->company_address }}">{{ $lead->company_address ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_state ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_domain ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap max-w-[200px] truncate" title="{{ $lead->company_description }}">{{ $lead->company_description ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_annual_revenue ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_total_funding ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap max-w-[150px] truncate" title="{{ $lead->company_technology }}">{{ $lead->company_technology ?: '-' }}</div></td>
+                    
+                    <td class="px-6 py-4 text-right sticky right-0 z-10 bg-white group-hover:bg-slate-50 border-l border-slate-100" @click.stop>
                         <div class="flex items-center justify-end space-x-2">
                             <button type="button" @click.stop="openModal('{{ $lead->id }}')"
                                     class="text-slate-400 hover:text-brand-blue p-2 rounded-lg hover:bg-brand-blue/5 transition-all" title="View Details">

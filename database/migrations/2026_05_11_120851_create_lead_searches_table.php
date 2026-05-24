@@ -11,13 +11,11 @@ return new class extends Migration
         Schema::create('lead_searches', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->string('country');
-            $table->string('city');
+            $table->string('target_location');
             $table->string('industry')->nullable();
             $table->text('position')->nullable();
-            $table->text('main_search_query')->nullable();
-            $table->string('status')->default('pending');
-            $table->json('n8n_response')->nullable();
+            $table->integer('volume')->default(10);
+            $table->string('status')->nullable();
             $table->text('error_message')->nullable();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();
