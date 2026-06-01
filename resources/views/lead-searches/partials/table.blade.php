@@ -18,7 +18,7 @@
                 <tr class="hover:bg-slate-50 transition-colors group">
                     <td class="px-6 py-4">
                         @php
-                            $date = $search->processing_started_at ?? $search->created_at;
+                            $date = $search->started_at ?? $search->created_at ?? now();
                         @endphp
                         <div class="text-sm font-medium text-slate-800">{{ $date->format('M d, Y') }}</div>
                         <div class="text-[10px] text-slate-400">{{ $date->format('h:i A') }}</div>
@@ -49,11 +49,11 @@
                     </td>
 
                     <td class="px-6 py-4">
-                        <div class="text-xs text-slate-700 font-medium">{{ $search->industry ?: 'Any Industry' }}</div>
+                        <div class="text-sm text-slate-700 font-semibold uppercase">{{ $search->industry ?: 'Any Industry' }}</div>
                     </td>
 
                     <td class="px-6 py-4">
-                        <div class="text-[10px] text-slate-400 truncate max-w-[150px]" title="{{ $search->position }}">{{ $search->position ?: 'Any Position' }}</div>
+                        <div class="text-sm text-slate-700 font-semibold uppercase" title="{{ $search->position }}">{{ $search->position ?: 'Any Position' }}</div>
                     </td>
 
                     <td class="px-6 py-4">

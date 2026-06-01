@@ -76,7 +76,7 @@ class LeadSearchController extends Controller
             $validated['position'] = mb_strtolower(trim($validated['position']));
         }
 
-        $targetUserId = auth()->id();
+$targetUserId = auth()->id();
 
         $leadSearch = LeadSearch::create([
             'user_id' => $targetUserId,
@@ -84,31 +84,28 @@ class LeadSearchController extends Controller
             'industry' => $validated['industry'] ?? null,
             'position' => $validated['position'] ?? null,
             'volume' => $validated['volume'] ?? 10,
-            'status' => 'processing',
+            'status' => 'processing', // Stays processing here!
             'started_at' => now(),
         ]);
 
         $validated['user_id'] = $targetUserId;
         $validated['lead_search_id'] = $leadSearch->id;
 
+        // Trigger n8n webhook
         $response = $n8nService->searchLeads($validated);
 
         if ($response['successful']) {
-            $leadSearch->update([
-                'status' => 'completed',
-                'completed_at' => now(),
-            ]);
-
+            // DO NOT update status to completed here. n8n will do that later.
             return response()->json([
                 'success' => true,
-                'message' => 'Lead Hunter finished processing. Leads will appear under this query.',
+                'message' => 'Lead Hunter has started in the background. Leads will appear shortly.',
                 'redirect' => route('lead-searches.index')
             ]);
         } else {
             $leadSearch->update([
                 'status' => 'failed',
                 'completed_at' => now(),
-                'error_message' => $response['error'] ?? 'Unknown error',
+                'error_message' => $response['error'] ?? 'Failed to reach extraction server.',
             ]);
 
             return response()->json([

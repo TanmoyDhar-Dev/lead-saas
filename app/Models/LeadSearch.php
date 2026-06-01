@@ -23,13 +23,13 @@ class LeadSearch extends Model
         'position',
         'volume',
         'status',
-        'processing_started_at',
+        'started_at',
         'completed_at',
         'error_message',
     ];
 
     protected $casts = [
-        'processing_started_at' => 'datetime',
+        'started_at' => 'datetime',
         'completed_at'          => 'datetime',
         'volume'                => 'integer',
     ];

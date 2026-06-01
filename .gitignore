@@ -5,6 +5,7 @@
 .env.production
 .phpactor.json
 .phpunit.result.cache
+/.github
 /.codex
 /.cursor/
 /.idea
@@ -25,3 +26,4 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+Project Specification Document.md
