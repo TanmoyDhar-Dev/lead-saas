@@ -34,9 +34,18 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     Route::get('/lead-searches', [LeadSearchController::class, 'index'])->name('lead-searches.index');
     Route::get('/lead-searches/create', [LeadSearchController::class, 'create'])->name('lead-searches.create');
     Route::post('/lead-searches', [LeadSearchController::class, 'store'])->name('lead-searches.store');
+    Route::post('/lead-searches/dispatch', [LeadSearchController::class, 'dispatchOutreach'])->name('lead-searches.dispatch');
     Route::get('/lead-searches/{leadSearch}/leads', [LeadSearchController::class, 'leads'])->name('lead-searches.leads');
     Route::get('/lead-searches/{leadSearch}/leads/{lead}/json', [LeadSearchController::class, 'leadJson'])->name('lead-searches.leads.json');
     Route::delete('/lead-searches/{leadSearch}', [LeadSearchController::class, 'destroy'])->name('lead-searches.destroy');
+
+    Route::get('/templates', [\App\Http\Controllers\TemplateController::class, 'index'])->name('templates.index');
+    Route::post('/templates', [\App\Http\Controllers\TemplateController::class, 'store'])->name('templates.store');
+    Route::post('/templates/{id}/default', [\App\Http\Controllers\TemplateController::class, 'setDefault'])->name('templates.default');
+    Route::delete('/templates/{id}', [\App\Http\Controllers\TemplateController::class, 'destroy'])->name('templates.destroy');
+
+    Route::get('/campaign-logs', [\App\Http\Controllers\CampaignLogController::class, 'index'])->name('campaign-logs.index');
+    Route::post('/leads/dispatch', [LeadSearchController::class, 'dispatchOutreach'])->name('leads.dispatch');
 
 });
 

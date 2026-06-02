@@ -60,4 +60,9 @@ class Lead extends Model
         }
         return $query->where('user_id', $user->id);
     }
+
+    public function leadAutomationDetail()
+    {
+        return $this->hasOne(LeadAutomationDetail::class);
+    }
 }

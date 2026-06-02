@@ -102,53 +102,7 @@
                         </div>
                     </div>
 
-                    {{-- Section 3: Location --}}
-                    <div>
-                        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center">
-                            <span class="w-8 h-px bg-slate-200 mr-3"></span>
-                            Location
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <template x-for="field in getSectionFields('location')" :key="field.key">
-                                <div class="bg-slate-50/50 border border-slate-100 rounded-xl p-4 transition-all">
-                                    <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5" x-text="field.label"></label>
-                                    <p class="text-xs font-medium text-slate-700 leading-relaxed break-words" x-text="field.value || 'Not available'"></p>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
 
-                    {{-- Section 3: Search & Enrichment --}}
-                    <div>
-                        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center">
-                            <span class="w-8 h-px bg-slate-200 mr-3"></span>
-                            Search & Enrichment
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <template x-for="field in getSectionFields('search')" :key="field.key">
-                                <div class="bg-slate-50/50 border border-slate-100 rounded-xl p-4 transition-all">
-                                    <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5" x-text="field.label"></label>
-                                    <p class="text-xs font-medium text-slate-700 leading-relaxed" x-text="field.value || 'Not available'"></p>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-
-                    {{-- Section 4: Status --}}
-                    <div>
-                        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center">
-                            <span class="w-8 h-px bg-slate-200 mr-3"></span>
-                            Status Information
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <template x-for="field in getSectionFields('status')" :key="field.key">
-                                <div class="bg-slate-50/50 border border-slate-100 rounded-xl p-4 transition-all">
-                                    <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5" x-text="field.label"></label>
-                                    <p class="text-xs font-medium text-slate-700 leading-relaxed" x-text="field.value || 'Not available'"></p>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
                 </div>
             </div>
 

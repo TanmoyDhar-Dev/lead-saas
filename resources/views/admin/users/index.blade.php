@@ -142,10 +142,7 @@
                             <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Lead Storage Limit</label>
                             <input type="number" name="lead_storage_limit" x-model="selectedUser.lead_storage_limit" min="0" class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-2.5">
                         </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Campaign Limit</label>
-                            <input type="number" name="campaign_limit" x-model="selectedUser.campaign_limit" min="0" class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-2.5">
-                        </div>
+
                         <div>
                             <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Email Send Limit</label>
                             <input type="number" name="email_send_limit" x-model="selectedUser.email_send_limit" min="0" class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-2.5">

@@ -143,11 +143,13 @@ $targetUserId = auth()->id();
 
         $leads = $query->orderBy('created_at', 'desc')->paginate(25)->withQueryString();
 
+        $templates = \App\Models\EmailTemplate::all();
+
         if ($request->ajax()) {
-            return view('lead-searches.partials.leads-table', compact('leads', 'leadSearch'))->render();
+            return view('lead-searches.partials.leads-table', compact('leads', 'leadSearch', 'templates'))->render();
         }
 
-        return view('lead-searches.leads', compact('leadSearch', 'leads'));
+        return view('lead-searches.leads', compact('leadSearch', 'leads', 'templates'));
     }
 
     /**
@@ -170,8 +172,8 @@ $targetUserId = auth()->id();
         $data = collect($lead->toArray())->except($hidden)->toArray();
 
         // Add formatted dates
-        $data['created_at_human'] = $lead->created_at->format('M d, Y H:i');
-        $data['updated_at_human'] = $lead->updated_at->format('M d, Y H:i');
+        $data['created_at_human'] = optional($lead->created_at)->format('M d, Y H:i') ?? 'N/A';
+        $data['updated_at_human'] = optional($lead->updated_at)->format('M d, Y H:i') ?? 'N/A';
 
         return response()->json($data);
     }
@@ -210,5 +212,75 @@ $targetUserId = auth()->id();
         $leadSearch->delete();
 
         return back()->with('success', 'Search record and associated leads deleted successfully.');
+    }
+
+    public function dispatchOutreach(Request $request)
+    {
+        $validated = $request->validate([
+            'lead_ids' => 'required|array',
+            'lead_ids.*' => 'exists:leads,id',
+            'delivery_mode' => 'required|string',
+            'subject' => 'required|string|max:255',
+            'body' => 'required|string',
+            'sender_name' => 'nullable|string|max:255',
+            'sender_role' => 'nullable|string|max:255',
+            'sender_company' => 'nullable|string|max:255',
+            'attachments.*' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+        ]);
+
+        $attachmentPaths = [];
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('campaign-attachments', 'public');
+                $attachmentPaths[] = $path;
+            }
+        }
+
+        $automationDetails = [];
+        foreach ($validated['lead_ids'] as $id) {
+            $automationDetails[] = \App\Models\LeadAutomationDetail::updateOrCreate(
+                ['lead_id' => $id],
+                [
+                    'email_sent' => $validated['delivery_mode'] === 'Send Immediately' ? 'sent' : 'drafted',
+                    'email_topic' => $validated['subject'],
+                    'email_body' => $validated['body'],
+                    'sender_name' => $validated['sender_name'] ?? null,
+                    'sender_role' => $validated['sender_role'] ?? null,
+                    'sender_company' => $validated['sender_company'] ?? null,
+                    'attachments' => !empty($attachmentPaths) ? json_encode($attachmentPaths) : null,
+                ]
+            );
+        }
+
+        $webhookUrl = env('EMAIL_OUTREACH_WEBHOOK_URL');
+        if ($webhookUrl) {
+            try {
+                // Prepend app URL to local attachment paths for external access
+                $absoluteAttachments = array_map(function($path) {
+                    return url('storage/' . $path);
+                }, $attachmentPaths);
+
+                \Illuminate\Support\Facades\Http::timeout(300)
+                    ->post($webhookUrl, [
+                        'action' => 'email_outreach',
+                        'deliveryMode' => $validated['delivery_mode'] === 'Send Immediately' ? 'send' : 'draft',
+                        'subject' => $validated['subject'],
+                        'body' => $validated['body'],
+                        'senderName' => $validated['sender_name'] ?? '',
+                        'senderRole' => $validated['sender_role'] ?? '',
+                        'senderCompany' => $validated['sender_company'] ?? '',
+                        'attachments' => $absoluteAttachments,
+                        'leadIds' => $validated['lead_ids'],
+                    ]);
+            } catch (\Exception $e) {
+                // Log or handle error if needed, but continue
+                \Illuminate\Support\Facades\Log::error('Failed to send webhook to n8n: ' . $e->getMessage());
+            }
+        }
+
+        $mode = $validated['delivery_mode'] === 'Send Immediately' ? 'Sending' : 'Drafting';
+        $count = count($validated['lead_ids']);
+
+        return back()->with('success', "Automation Sequence Initiated: {$mode} emails for {$count} leads.");
     }
 }

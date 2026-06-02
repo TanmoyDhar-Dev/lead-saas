@@ -94,7 +94,6 @@ class LeadController extends Controller
     public function show($id)
     {
         $lead = Lead::where('id', $id)
-            ->with(['campaignRecipients.campaign', 'leadAutomationDetails'])
             ->firstOrFail();
 
         $this->authorize('view', $lead);

@@ -54,7 +54,6 @@ class AdminUserController extends Controller
             'lead_search_limit' => ['nullable', 'integer', 'min:0'],
             'lead_export_limit' => ['nullable', 'integer', 'min:0'],
             'lead_storage_limit' => ['nullable', 'integer', 'min:0'],
-            'campaign_limit' => ['nullable', 'integer', 'min:0'],
             'email_send_limit' => ['nullable', 'integer', 'min:0'],
             'notes' => ['nullable', 'string'],
         ]);
@@ -88,7 +87,6 @@ class AdminUserController extends Controller
             'lead_search_limit' => ['nullable', 'integer', 'min:0'],
             'lead_export_limit' => ['nullable', 'integer', 'min:0'],
             'lead_storage_limit' => ['nullable', 'integer', 'min:0'],
-            'campaign_limit' => ['nullable', 'integer', 'min:0'],
             'email_send_limit' => ['nullable', 'integer', 'min:0'],
             'notes' => ['nullable', 'string'],
         ]);

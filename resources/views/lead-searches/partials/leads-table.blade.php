@@ -3,30 +3,15 @@
         <table class="w-full text-left border-collapse min-w-[1000px]">
             <thead>
                 <tr class="bg-slate-50/50 border-b border-slate-100">
-                    <th class="px-6 py-5 sticky left-0 z-10 bg-slate-50/90 backdrop-blur border-b border-r border-slate-100 w-10">
+                    <th class="px-6 py-5 sticky left-0 z-10 bg-slate-50/90 backdrop-blur border-b border-r border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-10">
                         <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" class="w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
                     </th>
-                    <th class="px-6 py-5 sticky left-10 z-10 bg-slate-50/90 backdrop-blur border-b border-r border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-56 whitespace-nowrap">Full Name</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Full Name</th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Job Title</th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Position</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Address</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Bio</th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">LinkedIn</th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Personal Email</th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Email</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Industry</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Name</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Website</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company LinkedIn</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company City</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Country</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Address</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company State</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Domain</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Description</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Annual Revenue</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Total Funding</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Technology</th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap sticky right-0 z-10 bg-slate-50/90 backdrop-blur border-b border-l border-slate-100">Actions</th>
                 </tr>
             </thead>
@@ -34,9 +19,9 @@
                 @forelse ($leads as $lead)
                 <tr class="hover:bg-slate-50 transition-colors group cursor-pointer" @click="openModal('{{ $lead->id }}')">
                     <td class="px-6 py-4 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-100" @click.stop>
-                        <input type="checkbox" value="{{ $lead->id }}" x-model="selectedIds" @change="updateSelectAllState()" class="lead-checkbox w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
+                        <input type="checkbox" value="{{ $lead->id }}" x-model="selectedLeadIds" class="lead-checkbox w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
                     </td>
-                    <td class="px-6 py-4 sticky left-10 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-100 min-w-[200px]">
+                    <td class="px-6 py-4 min-w-[200px]">
                         <div class="flex items-center">
                             <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs mr-3 border border-slate-200 shrink-0">
                                 {{ substr($lead->full_name ?: '?', 0, 1) }}
@@ -49,8 +34,6 @@
                     </td>
                     <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->job_title ?: '-' }}</div></td>
                     <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->position ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap max-w-[200px] truncate" title="{{ $lead->address }}">{{ $lead->address ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap max-w-[200px] truncate" title="{{ $lead->bio }}">{{ $lead->bio ?: '-' }}</div></td>
                     <td class="px-6 py-4" @click.stop>
                         @if($lead->linkedin_url)
                         <a href="{{ $lead->linkedin_url }}" target="_blank" class="text-[10px] text-brand-blue font-bold hover:underline flex items-center whitespace-nowrap">
@@ -62,27 +45,6 @@
                     </td>
                     <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->personal_email ?: '-' }}</div></td>
                     <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_email ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->industry ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_name ?: '-' }}</div></td>
-                    <td class="px-6 py-4">
-                        @if($lead->company_website)
-                        <a href="{{ Str::startsWith($lead->company_website, 'http') ? $lead->company_website : 'https://'.$lead->company_website }}" target="_blank" class="text-[10px] text-brand-blue hover:underline whitespace-nowrap" @click.stop>{{ $lead->company_website }}</a>
-                        @else <span class="text-[10px] text-slate-300">-</span> @endif
-                    </td>
-                    <td class="px-6 py-4">
-                        @if($lead->company_linkedin)
-                        <a href="{{ $lead->company_linkedin }}" target="_blank" class="text-[10px] text-brand-blue hover:underline whitespace-nowrap" @click.stop>Company LinkedIn</a>
-                        @else <span class="text-[10px] text-slate-300">-</span> @endif
-                    </td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_city ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_country ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap max-w-[200px] truncate" title="{{ $lead->company_address }}">{{ $lead->company_address ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_state ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_domain ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap max-w-[200px] truncate" title="{{ $lead->company_description }}">{{ $lead->company_description ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_annual_revenue ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_total_funding ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap max-w-[150px] truncate" title="{{ $lead->company_technology }}">{{ $lead->company_technology ?: '-' }}</div></td>
                     
                     <td class="px-6 py-4 text-right sticky right-0 z-10 bg-white group-hover:bg-slate-50 border-l border-slate-100" @click.stop>
                         <div class="flex items-center justify-end space-x-2">
@@ -103,7 +65,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="px-6 py-16 text-center">
+                    <td colspan="7" class="px-6 py-16 text-center">
                         <p class="text-slate-400 text-sm font-medium">No leads found matching your criteria.</p>
                     </td>
                 </tr>

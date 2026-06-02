@@ -8,7 +8,7 @@
     </x-slot>
 
     <x-slot name="actions">
-        <a href="{{ route('lead-searches.index') }}" class="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all flex items-center shadow-sm">
+        <a href="{{ route('lead-searches.index') }}" class="bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all flex items-center shadow-sm">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             BACK TO HISTORY
         </a>
@@ -81,60 +81,16 @@
                 </button>
             </div>
 
-            {{-- Right: Selection Actions --}}
-            <div class="flex items-center gap-3">
-                <div class="flex items-center bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mr-2">Selected:</span>
-                    <span class="bg-brand-blue text-white w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold" x-text="selectAllTotal ? totalLeadsCount : selectedIds.length">0</span>
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <form action="{{ route('campaigns.from-lead-search') }}" method="POST">
-                        @csrf
-                        <input type="hidden" name="lead_search_id" value="{{ $leadSearch->id }}">
-                        <input type="hidden" name="select_all_leads" :value="selectAllTotal ? 1 : 0">
-                        <template x-if="!selectAllTotal">
-                            <template x-for="id in selectedIds" :key="id">
-                                <input type="hidden" name="selected_lead_ids[]" :value="id">
-                            </template>
-                        </template>
-                        <button type="submit" 
-                                :disabled="selectedIds.length === 0 && !selectAllTotal"
-                                :class="selectedIds.length === 0 && !selectAllTotal ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-brand-blue text-white hover:bg-blue-600 shadow-blue-500/10'"
-                                class="px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            CONTINUE TO CAMPAIGN
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        
-        <div class="px-4" x-show="selectedIds.length === 0">
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center">
-                <svg class="w-3 h-3 mr-1 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Select leads to continue to campaign.
-            </p>
-        </div>
-
-        {{-- Select All Total Banner --}}
-        <div x-show="selectAll && !selectAllTotal && selectedIds.length > 0 && selectedIds.length < totalLeadsCount" 
-             x-transition 
-             class="mx-4 bg-blue-50 border border-blue-100 p-3 rounded-2xl flex items-center justify-between">
-            <div class="text-xs text-blue-700">
-                All <span class="font-bold" x-text="selectedIds.length"></span> leads on this page are selected.
-                <button @click="selectAllTotalLeads()" class="ml-2 font-bold underline hover:text-blue-800">Select all <span x-text="totalLeadsCount"></span> leads in this extraction</button>
+            {{-- Right: Actions --}}
+            <div class="flex items-center space-x-3 shrink-0">
+                <button x-bind:disabled="selectedLeadIds.length === 0" @click="showDispatchModal = true" 
+                        :class="selectedLeadIds.length === 0 ? 'opacity-50 cursor-not-allowed bg-slate-300 text-slate-500 shadow-none' : 'bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-95'" 
+                        class="px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center h-[42px]">
+                    EMAIL OUTREACH (<span x-text="selectedLeadIds.length"></span>)
+                </button>
             </div>
         </div>
 
-        <div x-show="selectAllTotal" 
-             x-transition 
-             class="mx-4 bg-brand-blue border border-blue-600 p-3 rounded-2xl flex items-center justify-between shadow-lg shadow-blue-500/10">
-            <div class="text-xs text-white">
-                <span class="font-bold text-white">All <span x-text="totalLeadsCount"></span> leads</span> in this extraction are selected.
-                <button @click="resetSelection()" class="ml-2 font-bold underline text-white/80 hover:text-white">Clear selection</button>
-            </div>
-        </div>
 
         {{-- Results Container --}}
         <div id="leads-container" class="transition-opacity duration-200" :class="loading ? 'opacity-50' : 'opacity-100'">
@@ -143,6 +99,120 @@
 
         {{-- Detail Modal --}}
         @include('leads.partials.details-modal-v2')
+
+        {{-- Dispatch Modal --}}
+        <div x-show="showDispatchModal" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+            <div class="w-full max-w-5xl h-[90vh] bg-white rounded-xl flex overflow-hidden shadow-2xl relative" @click.stop>
+                
+                {{-- Left Pane --}}
+                <div class="w-1/3 bg-gray-50 flex flex-col border-r border-slate-200">
+                    <div class="p-6 border-b border-slate-200 bg-white shrink-0">
+                        <h3 class="font-bold text-slate-800">Selected Targets</h3>
+                        <div class="mt-4 text-2xl font-black text-brand-blue" x-text="selectedLeadIds.length"></div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                        <template x-for="id in selectedLeadIds" :key="id">
+                            <div class="p-4 bg-white border border-slate-200 rounded-xl mb-2 flex flex-col hover:border-brand-blue/30 transition-colors shadow-sm">
+                                <span class="text-sm font-black text-slate-800" 
+                                      x-text="(leadsData.data.find(l => l.id == id) || {}).full_name || 'Unknown Name'"></span>
+                                <span class="text-[11px] font-bold text-slate-500 mt-1" 
+                                      x-text="(leadsData.data.find(l => l.id == id) || {}).job_title || 'No Title Available'"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                {{-- Right Pane --}}
+                <div class="w-2/3 flex flex-col bg-white">
+                    <form action="{{ route('leads.dispatch') }}" method="POST" enctype="multipart/form-data" class="flex-1 flex flex-col overflow-hidden">
+                        @csrf
+                        <template x-for="id in selectedLeadIds">
+                            <input type="hidden" name="lead_ids[]" :value="id">
+                        </template>
+
+                        <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar">
+                            {{-- Delivery Mode --}}
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Delivery Mode *</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="delivery_mode" value="Send Immediately" class="peer sr-only" required checked>
+                                        <div class="p-3 bg-white border border-slate-200 rounded-xl peer-checked:border-brand-blue peer-checked:bg-blue-50 transition-all flex flex-col items-center justify-center text-center">
+                                            <svg class="w-5 h-5 text-slate-400 peer-checked:text-brand-blue mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                                            <span class="text-xs font-bold text-slate-700 peer-checked:text-brand-blue">Send Immediately</span>
+                                        </div>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="delivery_mode" value="Save as Draft" class="peer sr-only">
+                                        <div class="p-3 bg-white border border-slate-200 rounded-xl peer-checked:border-brand-blue peer-checked:bg-blue-50 transition-all flex flex-col items-center justify-center text-center">
+                                            <svg class="w-5 h-5 text-slate-400 peer-checked:text-brand-blue mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                                            <span class="text-xs font-bold text-slate-700 peer-checked:text-brand-blue">Save as Draft</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {{-- Unified Template Selection --}}
+                            <div>
+                                <label class="text-xs font-bold text-slate-400">Template</label>
+                                <select x-model="selectedTemplate" 
+                                        @change="let t = templatesData.find(temp => temp.id == selectedTemplate); if(t) { form.subject = t.subject; form.body = t.body; form.sender_name = t.signature_name; form.sender_role = t.signature_position; form.sender_company = t.signature_company; form.sender_address = t.signature_address; } else { form.subject = ''; form.body = ''; form.sender_name = ''; form.sender_role = ''; form.sender_company = ''; form.sender_address = ''; }"
+                                        class="w-full bg-slate-50 border-slate-200 rounded-xl py-3 mt-1 text-sm focus:ring-brand-blue focus:border-brand-blue">
+                                    <option value="">Custom Template</option>
+                                    <template x-for="t in templatesData" :key="t.id">
+                                        <option :value="t.id" x-text="t.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            {{-- Subject --}}
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Email Subject *</label>
+                                <input type="text" name="subject" x-model="form.subject" required class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-3 px-4 transition-all" placeholder="e.g. Quick question regarding [Company]">
+                            </div>
+
+                            {{-- Body --}}
+                            <div>
+                                <label class="text-xs font-bold text-slate-400">Body</label>
+                                <textarea name="body" x-model="form.body" rows="6" required class="w-full bg-slate-50 border-slate-200 rounded-xl mt-1 p-4 text-sm focus:ring-brand-blue focus:border-brand-blue" placeholder="Hi..."></textarea>
+                            </div>
+
+                            {{-- Signature / Context --}}
+                            <div>
+                                <label class="text-xs font-bold text-slate-400 mb-2 block">Signature Context (Optional)</label>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <input name="sender_name" x-model="form.sender_name" placeholder="Sender Name" class="bg-slate-50 border-slate-200 rounded-xl p-3 text-sm focus:ring-brand-blue focus:border-brand-blue">
+                                    <input name="sender_role" x-model="form.sender_role" placeholder="Sender Role/Position" class="bg-slate-50 border-slate-200 rounded-xl p-3 text-sm focus:ring-brand-blue focus:border-brand-blue">
+                                    <input name="sender_company" x-model="form.sender_company" placeholder="Sender Company" class="bg-slate-50 border-slate-200 rounded-xl p-3 text-sm focus:ring-brand-blue focus:border-brand-blue">
+                                    <input name="sender_address" x-model="form.sender_address" placeholder="Sender Address" class="bg-slate-50 border-slate-200 rounded-xl p-3 text-sm focus:ring-brand-blue focus:border-brand-blue">
+                                </div>
+                            </div>
+
+                            {{-- Attachments --}}
+                            <div>
+                                <label class="text-xs font-bold text-slate-400 mb-2 block">Attachments (Optional)</label>
+                                <div class="w-full flex items-center justify-center p-6 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 hover:bg-slate-100 hover:border-brand-blue transition-colors cursor-pointer relative">
+                                    <input type="file" name="attachments[]" multiple accept=".pdf,.doc,.docx,image/*" @change="files = $event.target.files" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <div class="text-center pointer-events-none">
+                                        <svg class="mx-auto h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                        <span class="mt-2 block text-sm font-semibold text-slate-700">Drop files here or click to upload</span>
+                                    </div>
+                                </div>
+                                <div x-show="files.length > 0" class="mt-2 text-xs font-bold text-brand-blue">
+                                    <span x-text="files.length + ' file(s) selected'"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Sticky Footer --}}
+                        <div class="p-4 md:p-6 border-t border-slate-200 bg-white flex justify-end gap-3 shrink-0">
+                            <button type="button" @click="showDispatchModal = false" class="px-6 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-all">Cancel Session</button>
+                            <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white bg-brand-blue rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/30">Initiate Automation Sequence</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     @push('scripts')
@@ -155,62 +225,41 @@
                 modalError: null,
                 modalLeadId: null,
                 modalData: null,
-                selectedIds: [],
-                selectAll: false,
-                selectAllTotal: false,
                 totalLeadsCount: {{ $leads->total() }},
                 filters: {
                     q: '',
                     page: 1
                 },
+                leadsData: @json($leads),
+                selectedLeadIds: [],
+                selectAll: false,
+                showDispatchModal: false,
+                templatesData: @json($templates ?? []),
+                selectedTemplate: '',
+                form: {
+                    subject: '',
+                    body: '',
+                    sender_name: '',
+                    sender_role: '',
+                    sender_company: '',
+                    sender_address: ''
+                },
+                files: [],
                 
                 init() {
                     window.leadManager = this;
+                    
+                    this.$watch('selectedLeadIds', (val) => {
+                        const totalCheckboxes = document.querySelectorAll('.lead-checkbox').length;
+                        this.selectAll = val.length > 0 && val.length === totalCheckboxes;
+                    });
                 },
-
                 toggleSelectAll() {
-                    const checkboxes = document.querySelectorAll('.lead-checkbox');
-                    const allIdsOnPage = Array.from(checkboxes).map(cb => cb.value);
-                    
                     if (this.selectAll) {
-                        // Add only those not already selected
-                        allIdsOnPage.forEach(id => {
-                            if (!this.selectedIds.includes(id)) {
-                                this.selectedIds.push(id);
-                            }
-                        });
+                        const checkboxes = document.querySelectorAll('.lead-checkbox');
+                        this.selectedLeadIds = Array.from(checkboxes).map(cb => cb.value);
                     } else {
-                        // Remove current page IDs from selection
-                        this.selectedIds = this.selectedIds.filter(id => !allIdsOnPage.includes(id));
-                        this.selectAllTotal = false;
-                    }
-                },
-
-                selectAllTotalLeads() {
-                    this.selectAllTotal = true;
-                    // For UI feedback we can show a large number or just manage it via flag
-                    // But the forms need the IDs. We'll fetch all IDs via AJAX if needed, 
-                    // or just use a flag in the form. Let's use a flag.
-                },
-
-                resetSelection() {
-                    this.selectedIds = [];
-                    this.selectAll = false;
-                    this.selectAllTotal = false;
-                },
-
-                updateSelectAllState() {
-                    const checkboxes = document.querySelectorAll('.lead-checkbox');
-                    const allIdsOnPage = Array.from(checkboxes).map(cb => cb.value);
-                    
-                    if (allIdsOnPage.length === 0) {
-                        this.selectAll = false;
-                    } else {
-                        this.selectAll = allIdsOnPage.every(id => this.selectedIds.includes(id));
-                    }
-                    
-                    if (!this.selectAll) {
-                        this.selectAllTotal = false;
+                        this.selectedLeadIds = [];
                     }
                 },
 
@@ -236,7 +285,6 @@
                         }
                         
                         this.loading = false;
-                        this.updateSelectAllState();
                     })
                     .catch(() => {
                         this.loading = false;
@@ -296,29 +344,19 @@
                             { label: 'Company Email', key: 'company_email' }
                         ],
                         company: [
-                            { label: 'Company Name', key: 'company_name' },
                             { label: 'Industry', key: 'industry' },
+                            { label: 'Company Name', key: 'company_name' },
                             { label: 'Website', key: 'company_website', isUrl: true },
                             { label: 'LinkedIn', key: 'company_linkedin', isUrl: true },
+                            { label: 'City', key: 'company_city' },
+                            { label: 'Country', key: 'company_country' },
+                            { label: 'Address', key: 'company_address' },
+                            { label: 'State', key: 'company_state' },
                             { label: 'Domain', key: 'company_domain' },
                             { label: 'Description', key: 'company_description' },
-                            { label: 'Revenue', key: 'company_annual_revenue' },
-                            { label: 'Funding', key: 'company_total_funding' },
+                            { label: 'Annual Revenue', key: 'company_annual_revenue' },
+                            { label: 'Total Funding', key: 'company_total_funding' },
                             { label: 'Technology', key: 'company_technology' }
-                        ],
-                        location: [
-                            { label: 'City', key: 'company_city' },
-                            { label: 'State', key: 'company_state' },
-                            { label: 'Country', key: 'company_country' },
-                            { label: 'Address', key: 'company_address' }
-                        ],
-                        search: [
-                            { label: 'Position', key: 'position' },
-                            { label: 'Industry', key: 'industry' }
-                        ],
-                        status: [
-                            { label: 'Added At', key: 'created_at_human' },
-                            { label: 'Last Updated', key: 'updated_at_human' }
                         ]
                     };
 

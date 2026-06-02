@@ -37,7 +37,7 @@
                     @if($user->role !== 'admin')
                         <button @click="openEditLimits({{ json_encode($user) }})" class="group/limit">
                             <div class="text-[10px] font-mono text-slate-500 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 inline-block group-hover/limit:bg-brand-blue group-hover/limit:text-white transition-colors cursor-pointer">
-                                {{ $user->lead_search_limit ?? '∞' }} / {{ $user->lead_export_limit ?? '∞' }} / {{ $user->lead_storage_limit ?? '∞' }} / {{ $user->campaign_limit ?? '∞' }} / {{ $user->email_send_limit ?? '∞' }}
+                                {{ $user->lead_search_limit ?? '∞' }} / {{ $user->lead_export_limit ?? '∞' }} / {{ $user->lead_storage_limit ?? '∞' }} / {{ $user->email_send_limit ?? '∞' }}
                             </div>
                         </button>
                     @else

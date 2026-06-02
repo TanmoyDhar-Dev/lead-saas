@@ -7,18 +7,7 @@
         LeadFlow AI Intelligence • Extraction History
     </x-slot>
 
-    <x-slot name="actions">
-        <a href="{{ route('lead-searches.create') }}"
-            class="bg-brand-blue text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-600 transition-all flex items-center shadow-lg shadow-blue-500/20 active:scale-95">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-            LEAD HUNTER
-        </a>
-    </x-slot>
-
-    <div class="space-y-6" x-data="leadHistoryManager()">
+    <div class="space-y-6" x-data='leadHistoryManager()'>
         {{-- Compact Filter Bar --}}
         <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
             <div class="flex flex-col lg:flex-row items-center gap-4">
@@ -75,7 +64,7 @@
             function leadHistoryManager() {
                 return {
                     loading: false,
-                    pollInterval: null, // Track the polling timer
+                    pollInterval: null,
                     filters: {
                         q: '',
                         status: '',
@@ -83,7 +72,6 @@
                         page: 1
                     },
                     init() {
-                        // Start checking for updates as soon as the page loads
                         this.startPolling();
                     },
                     startPolling() {

@@ -75,7 +75,7 @@
                     <p class="text-xs text-slate-400 mb-4">Leave blank for unlimited access.</p>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        @foreach(['lead_search_limit' => 'Search Limit', 'lead_export_limit' => 'Export Limit', 'lead_storage_limit' => 'Storage Limit', 'campaign_limit' => 'Campaign Limit', 'email_send_limit' => 'Email Limit'] as $field => $label)
+                        @foreach(['lead_search_limit' => 'Search Limit', 'lead_export_limit' => 'Export Limit', 'lead_storage_limit' => 'Storage Limit', 'email_send_limit' => 'Email Limit'] as $field => $label)
                         <div class="space-y-1">
                             <label for="{{ $field }}" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{{ $label }}</label>
                             <input type="number" name="{{ $field }}" id="{{ $field }}" min="0" value="{{ old($field) }}"

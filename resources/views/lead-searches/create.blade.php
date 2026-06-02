@@ -87,9 +87,10 @@
                     <div class="space-y-1 col-span-1 md:col-span-2">
                         <label for="volume" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Volume (Max 100) *</label>
                         <div class="relative">
-                            <input type="number" name="volume" id="volume" 
+                            <input type="number" name="volume" id="volume" min="1" max="100" step="1"
                                    x-model.number="volume"
-                                   @input="volumeInvalid = (volume < 1 || volume > 100 || !volume)"
+                                   @keydown="if(['-','+','e','E','.'].includes($event.key)) $event.preventDefault()"
+                                   @input="if(volume !== '' && volume !== null) { if(volume < 1) volume = 1; if(volume > 100) volume = 100; } volumeInvalid = !volume;"
                                    required
                                    placeholder="50"
                                    :class="volumeInvalid ? 'border-red-500 ring-red-100' : 'border-slate-200 focus:ring-brand-blue'"
