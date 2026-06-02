@@ -8,11 +8,7 @@
     </x-slot>
 
     <div class="space-y-8 max-w-7xl mx-auto pb-10">
-        @if(session('success'))
-            <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl relative shadow-sm" role="alert">
-                <span class="block sm:inline text-sm font-bold">{{ session('success') }}</span>
-            </div>
-        @endif
+
         @if($errors->any())
             <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl relative shadow-sm">
                 <ul class="list-disc list-inside text-sm font-bold">

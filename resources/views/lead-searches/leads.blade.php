@@ -249,6 +249,17 @@
                 init() {
                     window.leadManager = this;
                     
+                    const defaultTemplate = this.templatesData.find(t => t.is_default);
+                    if (defaultTemplate) {
+                        this.selectedTemplate = defaultTemplate.id;
+                        this.form.subject = defaultTemplate.subject;
+                        this.form.body = defaultTemplate.body;
+                        this.form.sender_name = defaultTemplate.signature_name || '';
+                        this.form.sender_role = defaultTemplate.signature_position || '';
+                        this.form.sender_company = defaultTemplate.signature_company || '';
+                        this.form.sender_address = defaultTemplate.signature_address || '';
+                    }
+
                     this.$watch('selectedLeadIds', (val) => {
                         const totalCheckboxes = document.querySelectorAll('.lead-checkbox').length;
                         this.selectAll = val.length > 0 && val.length === totalCheckboxes;

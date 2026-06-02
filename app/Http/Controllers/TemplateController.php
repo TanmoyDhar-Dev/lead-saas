@@ -33,7 +33,7 @@ class TemplateController extends Controller
 
         EmailTemplate::create($validated);
 
-        return back()->with('success', 'Template saved successfully.');
+        return back()->with('success', 'Template saved successfull');
     }
 
     public function setDefault($id)
@@ -42,13 +42,13 @@ class TemplateController extends Controller
         if (!auth()->user()->isAdmin()) {
             $query->where('user_id', auth()->id());
         }
-        $query->update(['is_default' => false]);
+        $query->update(['is_default' => 'false']);
         
         $template = EmailTemplate::findOrFail($id);
         if (!auth()->user()->isAdmin() && $template->user_id !== auth()->id()) {
             abort(403);
         }
-        $template->update(['is_default' => true]);
+        $template->update(['is_default' => 'true']);
 
         return back()->with('success', 'Default template updated.');
     }
