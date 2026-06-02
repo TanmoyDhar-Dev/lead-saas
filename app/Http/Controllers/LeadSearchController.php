@@ -143,7 +143,11 @@ $targetUserId = auth()->id();
 
         $leads = $query->orderBy('created_at', 'desc')->paginate(25)->withQueryString();
 
-        $templates = \App\Models\EmailTemplate::all();
+        $templateQuery = \App\Models\EmailTemplate::query();
+        if (!auth()->user()->isAdmin()) {
+            $templateQuery->where('user_id', auth()->id());
+        }
+        $templates = $templateQuery->get();
 
         if ($request->ajax()) {
             return view('lead-searches.partials.leads-table', compact('leads', 'leadSearch', 'templates'))->render();

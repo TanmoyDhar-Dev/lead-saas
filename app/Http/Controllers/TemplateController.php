@@ -9,7 +9,11 @@ class TemplateController extends Controller
 {
     public function index()
     {
-        $templates = EmailTemplate::orderBy('created_at', 'desc')->get();
+        $query = EmailTemplate::orderBy('created_at', 'desc');
+        if (!auth()->user()->isAdmin()) {
+            $query->where('user_id', auth()->id());
+        }
+        $templates = $query->get();
         return view('templates.index', compact('templates'));
     }
 
@@ -25,6 +29,8 @@ class TemplateController extends Controller
             'signature_address' => 'nullable|string|max:255',
         ]);
 
+        $validated['user_id'] = auth()->id();
+
         EmailTemplate::create($validated);
 
         return back()->with('success', 'Template saved successfully.');
@@ -32,15 +38,28 @@ class TemplateController extends Controller
 
     public function setDefault($id)
     {
-        EmailTemplate::query()->update(['is_default' => false]);
-        EmailTemplate::findOrFail($id)->update(['is_default' => true]);
+        $query = EmailTemplate::query();
+        if (!auth()->user()->isAdmin()) {
+            $query->where('user_id', auth()->id());
+        }
+        $query->update(['is_default' => false]);
+        
+        $template = EmailTemplate::findOrFail($id);
+        if (!auth()->user()->isAdmin() && $template->user_id !== auth()->id()) {
+            abort(403);
+        }
+        $template->update(['is_default' => true]);
 
         return back()->with('success', 'Default template updated.');
     }
 
     public function destroy($id)
     {
-        EmailTemplate::destroy($id);
+        $template = EmailTemplate::findOrFail($id);
+        if (!auth()->user()->isAdmin() && $template->user_id !== auth()->id()) {
+            abort(403);
+        }
+        $template->delete();
 
         return back()->with('success', 'Template deleted successfully.');
     }
