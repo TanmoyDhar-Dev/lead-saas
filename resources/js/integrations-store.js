@@ -197,7 +197,9 @@ document.addEventListener('alpine:init', () => {
                 this.microsoftConnected = true;
                 this.syncMicrosoftItem();
                 await this.refreshStatus({ silent: true });
-                this.closeModal();
+                setTimeout(() => {
+                    this.closeModal();
+                }, 2000);
                 return;
             }
 
@@ -213,7 +215,9 @@ document.addEventListener('alpine:init', () => {
                 this.oauthHandled = true;
                 this.successMessage = 'Outlook connected successfully.';
                 this.syncMicrosoftItem();
-                this.closeModal();
+                setTimeout(() => {
+                    this.closeModal();
+                }, 2000);
             }
         },
 
