@@ -60,7 +60,14 @@ class MicrosoftOAuthController extends Controller
         $redirectUri = MicrosoftOAuth::redirectUri();
 
         try {
-            $azureUser = Socialite::driver('azure')
+            $driver = Socialite::driver('azure');
+            
+            // Bypass SSL verification on local environment (Laragon/Windows cURL issue)
+            if (app()->environment('local')) {
+                $driver->setHttpClient(new \GuzzleHttp\Client(['verify' => false]));
+            }
+
+            $azureUser = $driver
                 ->redirectUrl($redirectUri)
                 ->with(['redirect_uri' => $redirectUri])
                 ->scopes(self::SCOPES)
