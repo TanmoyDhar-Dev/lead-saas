@@ -2,7 +2,7 @@
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
-    <form method="POST" action="{{ route('login') }}" class="space-y-6">
+    <form method="POST" action="{{ route('login') }}" class="space-y-6" x-data="{ submitting: false }" @submit="submitting = true">
         @csrf
 
         <!-- Email Address -->
@@ -43,8 +43,9 @@
             <label for="remember_me" class="ms-2 text-xs font-medium text-slate-500">Keep me logged in</label>
         </div>
 
-        <button type="submit" class="w-full bg-navy-900 hover:bg-navy-950 text-white font-bold py-4 rounded-2xl transition-all transform active:scale-[0.98] shadow-xl shadow-navy-900/10">
-            SIGN IN TO LEADFLOW
+        <button type="submit" :disabled="submitting" class="w-full bg-navy-900 hover:bg-navy-950 text-white font-bold py-4 rounded-2xl transition-all transform active:scale-[0.98] shadow-xl shadow-navy-900/10 disabled:opacity-75 disabled:cursor-wait">
+            <span x-show="!submitting">SIGN IN TO LEADFLOW</span>
+            <span x-show="submitting" style="display: none;">SIGNING IN...</span>
         </button>
     </form>
 </x-guest-layout>
