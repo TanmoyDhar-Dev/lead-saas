@@ -41,4 +41,12 @@ return [
         'timeout' => env('N8N_HTTP_TIMEOUT', 300),
     ],
 
+    'azure' => [
+        'client_id' => env('AZURE_CLIENT_ID'),
+        'client_secret' => env('AZURE_CLIENT_SECRET'),
+        'redirect' => env('AZURE_REDIRECT_URI')
+            ?: rtrim((string) env('APP_URL', 'http://localhost:8000'), '/').'/auth/microsoft/callback',
+        'tenant' => env('AZURE_TENANT_ID', 'common'),
+    ],
+
 ];

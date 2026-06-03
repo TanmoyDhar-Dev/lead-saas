@@ -1,12 +1,18 @@
 <?php
 
+use App\Http\Controllers\Auth\MicrosoftOAuthController;
+use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadSearchController;
+use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\Admin\AdminUserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/t/o/{tracking_id}.gif', [TrackingController::class, 'open'])->name('tracking.open');
+Route::get('/t/c/{tracking_id}', [TrackingController::class, 'click'])->name('tracking.click');
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -53,6 +59,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/auth/microsoft/redirect', [MicrosoftOAuthController::class, 'redirect'])->name('auth.microsoft.redirect');
+    Route::get('/auth/microsoft/callback', [MicrosoftOAuthController::class, 'callback'])->name('auth.microsoft.callback');
+
+    Route::get('/integrations/status', [IntegrationController::class, 'status'])->name('integrations.status');
+    Route::delete('/integrations/{provider}', [IntegrationController::class, 'disconnect'])->name('integrations.disconnect');
 });
 
 Route::middleware(['auth', 'active_user', 'admin'])->prefix('admin')->name('admin.')->group(function () {

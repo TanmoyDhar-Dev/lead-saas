@@ -121,6 +121,9 @@
                 </main>
             </div>
         </div>
+        @auth
+            @include('layouts.partials.integrations-modal')
+        @endauth
         @stack('scripts')
     </body>
 </html>

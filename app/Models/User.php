@@ -47,6 +47,16 @@ class User extends Authenticatable
         return $this->hasMany(LeadSearch::class);
     }
 
+    public function connectedMailboxes()
+    {
+        return $this->hasMany(ConnectedMailbox::class);
+    }
+
+    public function microsoftMailbox()
+    {
+        return $this->hasOne(ConnectedMailbox::class)->where('provider', 'microsoft');
+    }
+
 
     public function isAdmin(): bool
     {

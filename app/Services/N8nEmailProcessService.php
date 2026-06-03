@@ -3,13 +3,15 @@
 namespace App\Services;
 
 use App\Models\Campaign;
+use App\Models\ConnectedMailbox;
 use App\Models\Lead;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Builds and POSTs the email-automation webhook body expected by the existing n8n workflow.
- * Root keys and records[] keys must stay camelCase — do not rename to snake_case.
+ * Builds and POSTs the email-automation webhook body expected by the n8n workflow.
+ * Root keys use camelCase for n8n compatibility.
  */
 class N8nEmailProcessService
 {
@@ -31,9 +33,16 @@ class N8nEmailProcessService
             ];
         }
 
-        $campaign->loadMissing(['campaignRecipients.lead', 'senderIdentity']);
-
-        $payload = $this->buildRootPayload($campaign, $attachments);
+        try {
+            $payload = $this->buildRootPayload($campaign, $attachments);
+        } catch (Throwable $e) {
+            return [
+                'successful' => false,
+                'status' => null,
+                'body' => null,
+                'error' => $e->getMessage(),
+            ];
+        }
 
         try {
             $response = Http::timeout($timeout)
@@ -63,15 +72,45 @@ class N8nEmailProcessService
      */
     public function buildRootPayload(Campaign $campaign, array $attachments = []): array
     {
+        $campaign->loadMissing(['campaignRecipients.lead', 'senderIdentity', 'user']);
+
+        $mailbox = ConnectedMailbox::where('user_id', $campaign->user_id)
+            ->where('provider', 'microsoft')
+            ->first();
+
+        if (! $mailbox) {
+            throw new \RuntimeException('No connected Microsoft mailbox found for this user. Connect Outlook first.');
+        }
+
+        $accessToken = ConnectedMailbox::getFreshAccessToken($mailbox);
+
         $sender = $campaign->senderIdentity;
         $searchWindow = $campaign->search_window;
-
         $records = [];
+
         foreach ($campaign->campaignRecipients as $recipient) {
-            if ($recipient->lead instanceof Lead) {
-                $records[] = $this->mapLeadToRecord($recipient->lead, $searchWindow);
+            if (! $recipient->lead instanceof Lead) {
+                continue;
             }
+
+            $email = $this->resolveLeadEmail($recipient->lead);
+            if ($email === null) {
+                continue;
+            }
+
+            if ($recipient->tracking_id === null) {
+                $recipient->tracking_id = (string) Str::uuid();
+                $recipient->save();
+            }
+
+            $records[] = [
+                'email' => $email,
+                'tracking_id' => $recipient->tracking_id,
+                ...$this->mapLeadToRecord($recipient->lead, $searchWindow),
+            ];
         }
+
+        $emailMainBody = $this->rewriteLinksForTracking((string) $campaign->email_main_body);
 
         $deliveryMode = $campaign->delivery_mode === 'send' ? 'send' : 'draft';
 
@@ -83,9 +122,10 @@ class N8nEmailProcessService
         return [
             'action' => 'process_leads',
             'deliveryMode' => $deliveryMode,
+            'microsoft_access_token' => $accessToken,
+            'emailMainBody' => $emailMainBody,
             'records' => $records,
             'attachments' => array_values($attachments),
-            'emailMainBody' => (string) $campaign->email_main_body,
             'emailSignature' => (string) $signature,
             'senderName' => (string) ($sender?->sender_name ?? ''),
             'senderRole' => (string) ($sender?->sender_role ?? ''),
@@ -98,6 +138,21 @@ class N8nEmailProcessService
         ];
     }
 
+    public function rewriteLinksForTracking(string $html): string
+    {
+        return (string) preg_replace_callback(
+            '/<a\s+([^>]*\s)?href=(["\'])([^"\']+)\2/i',
+            function (array $matches): string {
+                $prefix = $matches[1] ?? '';
+                $targetUrl = $matches[3];
+                $trackingUrl = url('/t/c/__TRACKING_ID__').'?url='.urlencode($targetUrl);
+
+                return '<a '.$prefix.'href="'.$trackingUrl.'"';
+            },
+            $html
+        );
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -105,24 +160,21 @@ class N8nEmailProcessService
     {
         $record = [
             'id' => $lead->id,
-            'personName' => $lead->person_name,
+            'personName' => $lead->full_name,
             'companyName' => $lead->company_name,
-            'industryApify' => $lead->industry_by_apifyapi,
+            'industryApify' => $lead->industry,
             'companyWebsite' => $lead->company_website,
-            'personalAddress' => $lead->personal_address_with_country,
+            'personalAddress' => $lead->address,
         ];
 
         $optional = [
-            'personalEmailAddress' => $lead->personal_email_address,
-            'linkedinUrl' => $lead->personal__linkdin_url,
-            'companyLinkedIn' => $lead->company_linkdin_url,
-            'countryBySearchParam' => $lead->country_by_search_param,
-            'cityBySearchParam' => $lead->city_by_search_param,
-            'industrySearchParam' => $lead->industry_by_search_param,
-            'positionSearchParam' => $lead->position_by_search_param,
-            'positionApify' => $lead->position_by_apifiapi,
-            'profileHeadline' => $lead->personal_linkdin_bio,
-            'profileAbout' => $lead->personal_profile_about,
+            'personalEmailAddress' => $lead->personal_email,
+            'linkedinUrl' => $lead->linkedin_url,
+            'companyLinkedIn' => $lead->company_linkedin,
+            'countryBySearchParam' => $lead->company_country,
+            'cityBySearchParam' => $lead->company_city,
+            'profileHeadline' => $lead->job_title,
+            'profileAbout' => $lead->bio,
             'searchWindow' => $searchWindow,
         ];
 
@@ -133,6 +185,17 @@ class N8nEmailProcessService
         }
 
         return $record;
+    }
+
+    private function resolveLeadEmail(Lead $lead): ?string
+    {
+        foreach ([$lead->personal_email, $lead->company_email] as $email) {
+            if ($this->isPresent($email)) {
+                return trim((string) $email);
+            }
+        }
+
+        return null;
     }
 
     private function isPresent(mixed $value): bool

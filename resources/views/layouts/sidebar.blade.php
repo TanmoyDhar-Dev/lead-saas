@@ -71,6 +71,8 @@
                 </nav>
             </div>
 
+            @include('layouts.partials.integrations')
+
             {{-- Administration (Admin Only) --}}
             @if(Auth::user()->isAdmin())
             <div>
@@ -160,6 +162,8 @@
 
                 </nav>
             </div>
+
+            @include('layouts.partials.integrations-mobile')
 
             {{-- Administration (Admin Only) --}}
             @if(Auth::user()->isAdmin())
