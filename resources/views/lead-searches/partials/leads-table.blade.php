@@ -33,7 +33,7 @@
                         </div>
                     </td>
                     <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->job_title ?: '-' }}</div></td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->position ?: '-' }}</div></td>
+                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap uppercase">{{ $lead->position ?: '-' }}</div></td>
                     <td class="px-6 py-4" @click.stop>
                         @if($lead->linkedin_url)
                         <a href="{{ $lead->linkedin_url }}" target="_blank" class="text-[10px] text-brand-blue font-bold hover:underline flex items-center whitespace-nowrap">

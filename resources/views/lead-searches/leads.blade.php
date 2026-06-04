@@ -4,7 +4,7 @@
     </x-slot>
 
     <x-slot name="subheader">
-        {{ $leadSearch->city }}, {{ $leadSearch->country }} • {{ $leadSearch->industry ?: 'Any Industry' }}
+        This is the list of leads that were collected for the extraction.
     </x-slot>
 
     <x-slot name="actions">
@@ -21,7 +21,7 @@
                 {{-- Position --}}
                 <div class="space-y-1">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target Position</p>
-                    <p class="text-sm font-bold text-slate-800 truncate" title="{{ $leadSearch->position ?: 'Any Position' }}">
+                    <p class="text-sm font-bold text-slate-800 truncate uppercase" title="{{ $leadSearch->position ?: 'Any Position' }}">
                         {{ $leadSearch->position ?: 'Any Position' }}
                     </p>
                 </div>
@@ -29,15 +29,17 @@
                 {{-- Location --}}
                 <div class="space-y-1">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Location</p>
-                    <p class="text-sm font-bold text-slate-800 truncate" title="{{ $leadSearch->city }}, {{ $leadSearch->country }}">
-                        {{ $leadSearch->city }}, {{ $leadSearch->country }}
+                    <p class="text-sm font-bold text-slate-800 truncate uppercase" title="{{ $leadSearch->target_location }}">
+                       
+                        {{ $leadSearch->target_location }}
+                        
                     </p>
                 </div>
 
                 {{-- Industry --}}
                 <div class="space-y-1">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Industry</p>
-                    <p class="text-sm font-bold text-slate-800 truncate" title="{{ $leadSearch->industry ?: 'Any Industry' }}">
+                    <p class="text-sm font-bold text-slate-800 truncate uppercase" title="{{ $leadSearch->industry ?: 'Any Industry' }}">
                         {{ $leadSearch->industry ?: 'Any Industry' }}
                     </p>
                 </div>
