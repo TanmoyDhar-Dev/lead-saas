@@ -47,7 +47,7 @@
                         Connected
                     </div>
                     <p class="text-sm text-slate-600" x-text="$store.integrations.microsoftEmail || 'Microsoft account linked'"></p>
-                    <p class="text-xs text-slate-500 mt-2">Scopes: Mail.Send, User.Read, offline_access</p>
+                    <p class="text-xs text-slate-500 mt-2">Scopes: Mail.Send, User.Read, Mail.ReadWrite, offline_access</p>
                 </div>
 
                 <div x-show="!$store.integrations.microsoftConnected" class="rounded-2xl border border-slate-100 bg-slate-50 p-4 mb-4">

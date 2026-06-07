@@ -43,7 +43,7 @@ class ConnectedMailbox extends Model
             'client_secret' => config('services.azure.client_secret'),
             'grant_type' => 'refresh_token',
             'refresh_token' => $mailbox->refresh_token,
-            'scope' => 'offline_access Mail.Send User.Read',
+            'scope' => 'offline_access Mail.Send User.Read Mail.ReadWrite',
         ]);
 
         if (! $response->successful()) {

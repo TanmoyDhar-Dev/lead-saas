@@ -16,7 +16,7 @@ use Throwable;
 
 class MicrosoftOAuthController extends Controller
 {
-    private const SCOPES = ['offline_access', 'Mail.Send', 'User.Read'];
+    private const SCOPES = ['offline_access', 'Mail.Send', 'User.Read', 'Mail.ReadWrite'];
 
     public function redirect(Request $request): RedirectResponse
     {

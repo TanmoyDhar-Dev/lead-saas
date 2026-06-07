@@ -3,23 +3,24 @@
 namespace App\Services;
 
 use App\Models\Campaign;
+use App\Models\CampaignRecipient;
 use App\Models\ConnectedMailbox;
 use App\Models\Lead;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Builds and POSTs the email-automation webhook body expected by the n8n workflow.
- * Root keys use camelCase for n8n compatibility.
+ * Dispatches campaign recipients to the n8n email-automation webhook one at a time.
+ * Each POST uses the async per-lead payload schema expected by the n8n workflow.
  */
 class N8nEmailProcessService
 {
     /**
-     * @param  array<int, mixed>  $attachments
-     * @return array{successful: bool, status: ?int, body: mixed, error: ?string}
+     * @return array{successful: bool, dispatched: int, failed: int, results: array<int, array<string, mixed>>}
      */
-    public function send(Campaign $campaign, array $attachments = []): array
+    public function send(Campaign $campaign): array
     {
         $webhookUrl = config('services.n8n.email_process_webhook_url');
         $timeout = (int) config('services.n8n.timeout', 300);
@@ -27,16 +28,141 @@ class N8nEmailProcessService
         if (! $webhookUrl) {
             return [
                 'successful' => false,
-                'status' => null,
-                'body' => null,
-                'error' => 'n8n email process webhook URL is not configured (N8N_EMAIL_PROCESS_WEBHOOK_URL).',
+                'dispatched' => 0,
+                'failed' => 0,
+                'results' => [[
+                    'successful' => false,
+                    'error' => 'n8n email process webhook URL is not configured (N8N_EMAIL_PROCESS_WEBHOOK_URL).',
+                ]],
             ];
         }
 
         try {
-            $payload = $this->buildRootPayload($campaign, $attachments);
+            $accessToken = $this->resolveMicrosoftAccessToken($campaign);
         } catch (Throwable $e) {
             return [
+                'successful' => false,
+                'dispatched' => 0,
+                'failed' => 0,
+                'results' => [[
+                    'successful' => false,
+                    'error' => $e->getMessage(),
+                ]],
+            ];
+        }
+
+        $campaign->loadMissing(['campaignRecipients.lead', 'senderIdentity']);
+
+        $results = [];
+        $dispatched = 0;
+        $failed = 0;
+
+        foreach ($campaign->campaignRecipients as $recipient) {
+            $result = $this->dispatchRecipient($campaign, $recipient, $accessToken, $webhookUrl, $timeout);
+            $results[] = $result;
+
+            if ($result['successful']) {
+                $dispatched++;
+            } else {
+                $failed++;
+            }
+        }
+
+        if ($dispatched > 0) {
+            $campaign->update(['sent_to_n8n_at' => now()]);
+        }
+
+        return [
+            'successful' => $failed === 0 && $dispatched > 0,
+            'dispatched' => $dispatched,
+            'failed' => $failed,
+            'results' => $results,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function buildRecipientPayload(
+        Campaign $campaign,
+        CampaignRecipient $recipient,
+        string $microsoftAccessToken,
+    ): array {
+        if (! $recipient->relationLoaded('lead')) {
+            $recipient->load('lead');
+        }
+
+        if (! $recipient->lead instanceof Lead) {
+            throw new \RuntimeException("Campaign recipient {$recipient->id} has no associated lead.");
+        }
+
+        $email = $this->resolveLeadEmail($recipient->lead);
+        if ($email === null) {
+            throw new \RuntimeException("Campaign recipient {$recipient->id} has no deliverable email address.");
+        }
+
+        if ($recipient->tracking_id === null) {
+            $recipient->tracking_id = (string) Str::uuid();
+            $recipient->save();
+        }
+
+        $sender = $campaign->senderIdentity;
+        $deliveryMode = $campaign->delivery_mode === 'send' ? 'send' : 'draft';
+        $subject = $this->substituteTemplateVariables(
+            (string) ($recipient->subject ?? ''),
+            $recipient->lead,
+            $email,
+        );
+
+        $mainBody = $this->prepareMainBody(
+            (string) $campaign->email_main_body,
+            $recipient->lead,
+            $email,
+            (string) $recipient->tracking_id,
+        );
+
+        return [
+            'system_context' => [
+                'campaign_recipient_id' => $recipient->id,
+                'tracking_id' => $recipient->tracking_id,
+                'delivery_mode' => $deliveryMode,
+                'microsoft_access_token' => $microsoftAccessToken,
+            ],
+            'sender_context' => [
+                'senderName' => (string) ($sender?->sender_name ?? ''),
+                'senderRole' => (string) ($sender?->sender_role ?? ''),
+                'senderCompany' => (string) ($sender?->sender_company ?? ''),
+                'senderAddress' => $this->resolveSenderAddress($campaign),
+            ],
+            'campaign_context' => $this->buildCampaignContext($campaign, $subject, $mainBody),
+            'lead_context' => [
+                'fullName' => (string) ($recipient->lead->full_name ?? ''),
+                'email' => $email,
+                'position' => (string) ($recipient->lead->position ?? $recipient->lead->job_title ?? ''),
+                'companyName' => (string) ($recipient->lead->company_name ?? ''),
+                'companyWebsite' => (string) ($recipient->lead->company_website ?? ''),
+                'companyLinkedin' => (string) ($recipient->lead->company_linkedin ?? ''),
+                'companyDescription' => (string) ($recipient->lead->company_description ?? ''),
+                'companyTechnology' => (string) ($recipient->lead->company_technology ?? ''),
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function dispatchRecipient(
+        Campaign $campaign,
+        CampaignRecipient $recipient,
+        string $accessToken,
+        string $webhookUrl,
+        int $timeout,
+    ): array {
+        try {
+            $payload = $this->buildRecipientPayload($campaign, $recipient, $accessToken);
+        } catch (Throwable $e) {
+            return [
+                'campaign_recipient_id' => $recipient->id,
                 'successful' => false,
                 'status' => null,
                 'body' => null,
@@ -50,7 +176,12 @@ class N8nEmailProcessService
                 ->asJson()
                 ->post($webhookUrl, $payload);
 
+            if ($response->successful()) {
+                $recipient->update(['status' => 'queued']);
+            }
+
             return [
+                'campaign_recipient_id' => $recipient->id,
                 'successful' => $response->successful(),
                 'status' => $response->status(),
                 'body' => $response->json() ?? $response->body(),
@@ -58,6 +189,7 @@ class N8nEmailProcessService
             ];
         } catch (Throwable $e) {
             return [
+                'campaign_recipient_id' => $recipient->id,
                 'successful' => false,
                 'status' => null,
                 'body' => null,
@@ -66,14 +198,8 @@ class N8nEmailProcessService
         }
     }
 
-    /**
-     * @param  array<int, mixed>  $attachments
-     * @return array<string, mixed>
-     */
-    public function buildRootPayload(Campaign $campaign, array $attachments = []): array
+    private function resolveMicrosoftAccessToken(Campaign $campaign): string
     {
-        $campaign->loadMissing(['campaignRecipients.lead', 'senderIdentity', 'user']);
-
         $mailbox = ConnectedMailbox::where('user_id', $campaign->user_id)
             ->where('provider', 'microsoft')
             ->first();
@@ -82,60 +208,107 @@ class N8nEmailProcessService
             throw new \RuntimeException('No connected Microsoft mailbox found for this user. Connect Outlook first.');
         }
 
-        $accessToken = ConnectedMailbox::getFreshAccessToken($mailbox);
+        return ConnectedMailbox::getFreshAccessToken($mailbox);
+    }
 
-        $sender = $campaign->senderIdentity;
-        $searchWindow = $campaign->search_window;
-        $records = [];
+    private function resolveSenderAddress(Campaign $campaign): string
+    {
+        return (string) ($campaign->n8n_response['sender_address'] ?? '');
+    }
 
-        foreach ($campaign->campaignRecipients as $recipient) {
-            if (! $recipient->lead instanceof Lead) {
-                continue;
-            }
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildCampaignContext(Campaign $campaign, string $subject, string $mainBody): array
+    {
+        $context = [
+            'subject' => $subject,
+            'mainBody' => $mainBody,
+        ];
 
-            $email = $this->resolveLeadEmail($recipient->lead);
-            if ($email === null) {
-                continue;
-            }
+        $attachments = $this->resolveCampaignAttachments($campaign);
 
-            if ($recipient->tracking_id === null) {
-                $recipient->tracking_id = (string) Str::uuid();
-                $recipient->save();
-            }
-
-            $records[] = [
-                'email' => $email,
-                'tracking_id' => $recipient->tracking_id,
-                ...$this->mapLeadToRecord($recipient->lead, $searchWindow),
-            ];
+        if (count($attachments) === 1) {
+            $context['attachment'] = $attachments[0];
+        } elseif (count($attachments) > 1) {
+            $context['attachments'] = $attachments;
         }
 
-        $emailMainBody = $this->rewriteLinksForTracking((string) $campaign->email_main_body);
+        return $context;
+    }
 
-        $deliveryMode = $campaign->delivery_mode === 'send' ? 'send' : 'draft';
+    /**
+     * @return array<int, array{name: string, contentType: string, contentBytes: string}>
+     */
+    private function resolveCampaignAttachments(Campaign $campaign): array
+    {
+        $stored = $campaign->n8n_response['attachments'] ?? [];
 
-        $signature = $campaign->email_signature;
-        if ($signature === null || $signature === '') {
-            $signature = $sender?->email_signature ?? '';
+        if (! is_array($stored)) {
+            return [];
+        }
+
+        $attachments = [];
+
+        foreach ($stored as $item) {
+            $attachment = $this->buildAttachmentPayload($item);
+
+            if ($attachment !== null) {
+                $attachments[] = $attachment;
+            }
+        }
+
+        return $attachments;
+    }
+
+    /**
+     * @param  array<string, mixed>|string  $item
+     * @return array{name: string, contentType: string, contentBytes: string}|null
+     */
+    private function buildAttachmentPayload(array|string $item): ?array
+    {
+        if (is_string($item)) {
+            $path = ltrim($item, '/');
+            $name = basename($path);
+            $contentType = $this->guessContentType($path);
+        } else {
+            $path = ltrim((string) ($item['path'] ?? ''), '/');
+            $name = (string) ($item['name'] ?? basename($path));
+            $contentType = (string) ($item['contentType'] ?? $this->guessContentType($path));
+        }
+
+        if ($path === '' || ! Storage::disk('public')->exists($path)) {
+            return null;
         }
 
         return [
-            'action' => 'process_leads',
-            'deliveryMode' => $deliveryMode,
-            'microsoft_access_token' => $accessToken,
-            'emailMainBody' => $emailMainBody,
-            'records' => $records,
-            'attachments' => array_values($attachments),
-            'emailSignature' => (string) $signature,
-            'senderName' => (string) ($sender?->sender_name ?? ''),
-            'senderRole' => (string) ($sender?->sender_role ?? ''),
-            'senderCompany' => (string) ($sender?->sender_company ?? ''),
-            'senderRegion' => (string) ($sender?->sender_region ?? ''),
-            'senderIndustry' => (string) ($sender?->sender_industry ?? ''),
-            'senderLinkedIn' => (string) ($sender?->sender_linkedin ?? ''),
-            'senderWebsite' => (string) ($sender?->sender_website ?? ''),
-            'senderEoChapter' => (string) ($sender?->sender_eo_chapter ?? ''),
+            'name' => $name,
+            'contentType' => $contentType,
+            'contentBytes' => base64_encode(Storage::disk('public')->get($path)),
         ];
+    }
+
+    private function guessContentType(string $path): string
+    {
+        $fullPath = Storage::disk('public')->path($path);
+
+        if (! is_file($fullPath)) {
+            return 'application/octet-stream';
+        }
+
+        $detected = mime_content_type($fullPath);
+
+        return is_string($detected) && $detected !== ''
+            ? $detected
+            : 'application/octet-stream';
+    }
+
+    public function prepareMainBody(string $html, Lead $lead, string $email, string $trackingId): string
+    {
+        $withTrackingLinks = $this->rewriteLinksForTracking($html);
+        $withTrackingLinks = str_replace('__TRACKING_ID__', $trackingId, $withTrackingLinks);
+
+        return $this->substituteTemplateVariables($withTrackingLinks, $lead, $email);
     }
 
     public function rewriteLinksForTracking(string $html): string
@@ -153,38 +326,27 @@ class N8nEmailProcessService
         );
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function mapLeadToRecord(Lead $lead, ?string $searchWindow): array
+    public function substituteTemplateVariables(string $template, Lead $lead, string $email): string
     {
-        $record = [
-            'id' => $lead->id,
-            'personName' => $lead->full_name,
-            'companyName' => $lead->company_name,
-            'industryApify' => $lead->industry,
-            'companyWebsite' => $lead->company_website,
-            'personalAddress' => $lead->address,
+        $hyperlineToken = '__HYPERLINE_TOKEN__'.Str::uuid()->toString();
+        $protected = str_replace('{{hyperline}}', $hyperlineToken, $template);
+
+        $replacements = [
+            '{{fullName}}' => (string) ($lead->full_name ?? ''),
+            '{{companyName}}' => (string) ($lead->company_name ?? ''),
+            '{{position}}' => (string) ($lead->position ?? $lead->job_title ?? ''),
+            '{{email}}' => $email,
+            '{{companyWebsite}}' => (string) ($lead->company_website ?? ''),
+            '{{companyLinkedin}}' => (string) ($lead->company_linkedin ?? ''),
+            '{{companyDescription}}' => (string) ($lead->company_description ?? ''),
+            '{{companyTechnology}}' => (string) ($lead->company_technology ?? ''),
         ];
 
-        $optional = [
-            'personalEmailAddress' => $lead->personal_email,
-            'linkedinUrl' => $lead->linkedin_url,
-            'companyLinkedIn' => $lead->company_linkedin,
-            'countryBySearchParam' => $lead->company_country,
-            'cityBySearchParam' => $lead->company_city,
-            'profileHeadline' => $lead->job_title,
-            'profileAbout' => $lead->bio,
-            'searchWindow' => $searchWindow,
-        ];
-
-        foreach ($optional as $key => $value) {
-            if ($this->isPresent($value)) {
-                $record[$key] = $value;
-            }
+        foreach ($replacements as $placeholder => $value) {
+            $protected = str_replace($placeholder, $value, $protected);
         }
 
-        return $record;
+        return str_replace($hyperlineToken, '{{hyperline}}', $protected);
     }
 
     private function resolveLeadEmail(Lead $lead): ?string

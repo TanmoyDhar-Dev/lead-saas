@@ -3,10 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreLeadSearchRequest;
+use App\Models\Campaign;
+use App\Models\CampaignRecipient;
 use App\Models\Lead;
 use App\Models\LeadSearch;
+use App\Models\SenderIdentity;
+use App\Services\N8nEmailProcessService;
 use App\Services\N8nLeadCollectionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class LeadSearchController extends Controller
 {
@@ -218,10 +224,10 @@ $targetUserId = auth()->id();
         return back()->with('success', 'Search record and associated leads deleted successfully.');
     }
 
-    public function dispatchOutreach(Request $request)
+    public function dispatchOutreach(Request $request, N8nEmailProcessService $n8nEmailService)
     {
         $validated = $request->validate([
-            'lead_ids' => 'required|array',
+            'lead_ids' => 'required|array|min:1',
             'lead_ids.*' => 'exists:leads,id',
             'delivery_mode' => 'required|string',
             'subject' => 'required|string|max:255',
@@ -229,62 +235,133 @@ $targetUserId = auth()->id();
             'sender_name' => 'nullable|string|max:255',
             'sender_role' => 'nullable|string|max:255',
             'sender_company' => 'nullable|string|max:255',
+            'sender_address' => 'nullable|string|max:255',
             'attachments.*' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
         ]);
+
+        $user = $request->user();
+        $leads = Lead::visibleTo($user)->whereIn('id', $validated['lead_ids'])->get();
+
+        if ($leads->count() !== count($validated['lead_ids'])) {
+            return back()->withErrors(['lead_ids' => 'One or more selected leads are not accessible.']);
+        }
 
         $attachmentPaths = [];
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $path = $file->store('campaign-attachments', 'public');
-                $attachmentPaths[] = $path;
+                $attachmentPaths[] = [
+                    'path' => $file->store('campaign-attachments', 'public'),
+                    'name' => $file->getClientOriginalName(),
+                    'contentType' => $file->getMimeType() ?: 'application/octet-stream',
+                ];
             }
         }
 
-        $automationDetails = [];
-        foreach ($validated['lead_ids'] as $id) {
-            $automationDetails[] = \App\Models\LeadAutomationDetail::updateOrCreate(
-                ['lead_id' => $id],
-                [
-                    'email_sent' => $validated['delivery_mode'] === 'Send Immediately' ? 'sent' : 'drafted',
-                    'email_topic' => $validated['subject'],
-                    'email_body' => $validated['body'],
-                    'sender_name' => $validated['sender_name'] ?? null,
-                    'sender_role' => $validated['sender_role'] ?? null,
-                    'sender_company' => $validated['sender_company'] ?? null,
-                    'attachments' => !empty($attachmentPaths) ? json_encode($attachmentPaths) : null,
-                ]
-            );
-        }
+        $deliveryMode = $validated['delivery_mode'] === 'Send Immediately' ? 'send' : 'draft';
+        $senderIdentity = $this->resolveSenderIdentity($user->id, $validated);
 
-        $webhookUrl = env('EMAIL_OUTREACH_WEBHOOK_URL');
-        if ($webhookUrl) {
-            try {
-                // Prepend app URL to local attachment paths for external access
-                $absoluteAttachments = array_map(function($path) {
-                    return url('storage/' . $path);
-                }, $attachmentPaths);
+        $campaign = DB::transaction(function () use ($user, $validated, $leads, $deliveryMode, $senderIdentity, $attachmentPaths) {
+            $campaign = Campaign::create([
+                'user_id' => $user->id,
+                'sender_identity_id' => $senderIdentity?->id,
+                'name' => 'Outreach '.now()->format('M d, Y H:i'),
+                'delivery_mode' => $deliveryMode,
+                'email_main_body' => $validated['body'],
+                'status' => 'pending',
+                'n8n_response' => [
+                    'attachments' => $attachmentPaths,
+                    'sender_address' => trim((string) ($validated['sender_address'] ?? '')),
+                ],
+            ]);
 
-                \Illuminate\Support\Facades\Http::timeout(300)
-                    ->post($webhookUrl, [
-                        'action' => 'email_outreach',
-                        'deliveryMode' => $validated['delivery_mode'] === 'Send Immediately' ? 'send' : 'draft',
-                        'subject' => $validated['subject'],
-                        'body' => $validated['body'],
-                        'senderName' => $validated['sender_name'] ?? '',
-                        'senderRole' => $validated['sender_role'] ?? '',
-                        'senderCompany' => $validated['sender_company'] ?? '',
-                        'attachments' => $absoluteAttachments,
-                        'leadIds' => $validated['lead_ids'],
-                    ]);
-            } catch (\Exception $e) {
-                // Log or handle error if needed, but continue
-                \Illuminate\Support\Facades\Log::error('Failed to send webhook to n8n: ' . $e->getMessage());
+            foreach ($leads as $lead) {
+                CampaignRecipient::create([
+                    'campaign_id' => $campaign->id,
+                    'lead_id' => $lead->id,
+                    'tracking_id' => (string) Str::uuid(),
+                    'status' => 'pending',
+                    'subject' => $validated['subject'],
+                ]);
             }
+
+            return $campaign;
+        });
+
+        $result = $n8nEmailService->send($campaign->fresh(['campaignRecipients.lead', 'senderIdentity']));
+
+        $campaign->update([
+            'status' => match (true) {
+                $result['successful'] => 'processing',
+                $result['dispatched'] > 0 => 'partial',
+                default => 'failed',
+            },
+            'error_message' => $result['failed'] > 0
+                ? collect($result['results'])->pluck('error')->filter()->first()
+                : null,
+            'n8n_response' => array_merge(
+                (array) ($campaign->n8n_response ?? []),
+                ['dispatch' => $result],
+            ),
+        ]);
+
+        if ($result['dispatched'] === 0) {
+            $error = $result['results'][0]['error'] ?? 'Failed to dispatch campaign to n8n.';
+
+            return back()->withErrors(['dispatch' => $error]);
         }
 
-        $mode = $validated['delivery_mode'] === 'Send Immediately' ? 'Sending' : 'Drafting';
-        $count = count($validated['lead_ids']);
+        $mode = $deliveryMode === 'send' ? 'Sending' : 'Drafting';
+        $message = "Automation Sequence Initiated: {$mode} emails for {$result['dispatched']} leads.";
 
-        return back()->with('success', "Automation Sequence Initiated: {$mode} emails for {$count} leads.");
+        if ($result['failed'] > 0) {
+            $message .= " {$result['failed']} lead(s) could not be dispatched.";
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function resolveSenderIdentity(int $userId, array $validated): ?SenderIdentity
+    {
+        $senderName = trim((string) ($validated['sender_name'] ?? ''));
+        $senderRole = trim((string) ($validated['sender_role'] ?? ''));
+        $senderCompany = trim((string) ($validated['sender_company'] ?? ''));
+
+        if ($senderName === '' && $senderRole === '' && $senderCompany === '') {
+            return SenderIdentity::where('user_id', $userId)->where('is_default', true)->first()
+                ?? SenderIdentity::where('user_id', $userId)->first();
+        }
+
+        $existing = SenderIdentity::query()
+            ->where('user_id', $userId)
+            ->where('sender_name', $senderName)
+            ->where('sender_role', $senderRole ?: null)
+            ->where('sender_company', $senderCompany ?: null)
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $isFirstForUser = SenderIdentity::where('user_id', $userId)->doesntExist();
+
+        $identity = SenderIdentity::create([
+            'user_id' => $userId,
+            'sender_name' => $senderName,
+            'sender_role' => $senderRole ?: null,
+            'sender_company' => $senderCompany ?: null,
+            'name' => $senderName !== '' ? $senderName : 'Outreach Sender',
+        ]);
+
+        if ($isFirstForUser) {
+            DB::table('sender_identities')
+                ->where('id', $identity->id)
+                ->update(['is_default' => DB::raw('true')]);
+            $identity->refresh();
+        }
+
+        return $identity;
     }
 }

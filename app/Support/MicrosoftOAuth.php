@@ -29,7 +29,7 @@ class MicrosoftOAuth
             'client_id' => config('services.azure.client_id'),
             'response_type' => 'code',
             'redirect_uri' => self::redirectUri(),
-            'scope' => implode(' ', ['offline_access', 'Mail.Send', 'User.Read']),
+            'scope' => implode(' ', ['offline_access', 'Mail.Send', 'User.Read', 'Mail.ReadWrite']),
             'state' => $state,
             'response_mode' => 'query',
         ], '', '&', PHP_QUERY_RFC3986);
