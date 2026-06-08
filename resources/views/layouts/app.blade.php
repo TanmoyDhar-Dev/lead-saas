@@ -100,9 +100,24 @@
                 @endif
                 @if(session('error'))
                 <div class="mx-6 lg:mx-8 mt-4">
-                    <div class="bg-red-50 border border-red-100 text-red-700 px-5 py-3 rounded-2xl text-sm font-medium flex items-center" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)" x-transition>
+                    <div class="bg-red-50 border border-red-100 text-red-700 px-5 py-3 rounded-2xl text-sm font-medium flex items-center" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 8000)" x-transition>
                         <svg class="w-5 h-5 mr-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
                         {{ session('error') }}
+                    </div>
+                </div>
+                @endif
+                @if($errors->any())
+                <div class="mx-6 lg:mx-8 mt-4">
+                    <div class="bg-red-50 border border-red-100 text-red-700 px-5 py-4 rounded-2xl text-sm font-medium flex flex-col gap-1" x-data="{ show: true }" x-show="show" x-transition>
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                            <span>There were some errors with your request:</span>
+                        </div>
+                        <ul class="list-disc pl-11 mt-1 text-xs space-y-1">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
                     </div>
                 </div>
                 @endif
