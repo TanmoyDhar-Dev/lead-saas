@@ -38,7 +38,7 @@ return [
     'n8n' => [
         'lead_search_webhook_url' => env('N8N_LEAD_SEARCH_WEBHOOK_URL'),
         'email_process_webhook_url' => env('N8N_EMAIL_PROCESS_WEBHOOK_URL'),
-        'secret' => env('N8N_SECRET'),
+        'secret' => env('N8N_WEBHOOK_SECRET'),
         'timeout' => env('N8N_HTTP_TIMEOUT', 300),
     ],
 

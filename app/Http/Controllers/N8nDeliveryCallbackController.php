@@ -16,6 +16,8 @@ class N8nDeliveryCallbackController extends Controller
             'status' => 'required|string|max:255',
             'hyper_personalized_line' => 'nullable|string',
             'news_summary' => 'nullable|string',
+            'subject' => 'nullable|string',
+            'final_email_body' => 'nullable|string',
             'sent_at' => 'nullable|date',
             'drafted_at' => 'nullable|date',
         ]);
@@ -26,6 +28,8 @@ class N8nDeliveryCallbackController extends Controller
             'status' => $validated['status'],
             'hyper_personalized_line' => $validated['hyper_personalized_line'] ?? null,
             'news_summary' => $validated['news_summary'] ?? null,
+            'subject' => $validated['subject'] ?? null,
+            'final_email_body' => $validated['final_email_body'] ?? null,
             'sent_at' => isset($validated['sent_at'])
                 ? Carbon::parse($validated['sent_at'])
                 : null,
