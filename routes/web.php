@@ -6,6 +6,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadSearchController;
+use App\Http\Controllers\OpenedEmailController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\Admin\AdminUserController;
 use Illuminate\Http\Request;
@@ -50,7 +51,7 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     Route::post('/templates/{id}/default', [\App\Http\Controllers\TemplateController::class, 'setDefault'])->name('templates.default');
     Route::delete('/templates/{id}', [\App\Http\Controllers\TemplateController::class, 'destroy'])->name('templates.destroy');
 
-    Route::get('/campaign-logs', [\App\Http\Controllers\CampaignLogController::class, 'index'])->name('campaign-logs.index');
+    Route::get('/opened-emails', [OpenedEmailController::class, 'index'])->name('opened-emails.index');
     Route::post('/leads/dispatch', [LeadSearchController::class, 'dispatchOutreach'])->name('leads.dispatch');
 
 });

@@ -29,6 +29,48 @@
             <div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 bg-brand-cyan/10 rounded-full blur-3xl"></div>
         </div>
 
+        <!-- Email Tracking Stats -->
+        <div>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-slate-800">Email Outreach</h3>
+                <a href="{{ route('opened-emails.index') }}" class="text-brand-blue text-sm font-bold hover:underline">View opened emails</a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                        </div>
+                        <span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">Sent</span>
+                    </div>
+                    <p class="text-3xl font-black text-slate-800">{{ number_format($emailStats['sent']) }}</p>
+                    <p class="text-slate-500 text-sm mt-1">Emails delivered via outreach</p>
+                </div>
+
+                <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                        </div>
+                        <span class="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">Drafts</span>
+                    </div>
+                    <p class="text-3xl font-black text-slate-800">{{ number_format($emailStats['drafted']) }}</p>
+                    <p class="text-slate-500 text-sm mt-1">Emails saved as drafts</p>
+                </div>
+
+                <a href="{{ route('opened-emails.index') }}" class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 hover:border-brand-blue/30 transition-colors block">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-brand-blue">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        </div>
+                        <span class="bg-blue-50 text-brand-blue px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">Opened</span>
+                    </div>
+                    <p class="text-3xl font-black text-slate-800">{{ number_format($emailStats['opened']) }}</p>
+                    <p class="text-slate-500 text-sm mt-1">Sent emails opened by recipients</p>
+                </a>
+            </div>
+        </div>
+
         <!-- Stats Cards Row -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Account Authority -->
