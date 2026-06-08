@@ -3,7 +3,7 @@
         Opened Emails
     </x-slot>
     <x-slot name="subheader">
-        Sent emails that recipients have opened (tracking pixel)
+        Sent emails that recipients have opened
     </x-slot>
 
     <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
