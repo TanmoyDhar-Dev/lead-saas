@@ -126,7 +126,7 @@
         <!-- Latest Activity Row -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <!-- Latest Leads -->
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            {{-- <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-6 border-b border-slate-100 flex justify-between items-center">
                     <h3 class="font-bold text-slate-800">Latest Intelligence</h3>
                     <a href="{{ route('leads.index') }}" class="text-brand-blue text-sm font-bold hover:underline">View Hunter</a>
@@ -164,10 +164,10 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </div> --}}
 
             <!-- Recent Searches -->
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            {{-- <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-6 border-b border-slate-100 flex justify-between items-center">
                     <h3 class="font-bold text-slate-800">Recent Discoveries</h3>
                     <a href="{{ route('lead-searches.index') }}" class="text-brand-blue text-sm font-bold hover:underline">History</a>
@@ -201,7 +201,7 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </div> --}}
         </div>
     </div>
 </x-app-layout>
