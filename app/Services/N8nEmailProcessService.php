@@ -171,7 +171,8 @@ class N8nEmailProcessService
         }
 
         try {
-            $response = Http::timeout($timeout)
+            $response = Http::withoutVerifying()
+                ->timeout($timeout)
                 ->retry(2, 2000)
                 ->asJson()
                 ->post($webhookUrl, $payload);
