@@ -10,7 +10,7 @@
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Job Title</th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Position</th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">LinkedIn</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Personal Email</th>
+                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Outreach Status</th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Company Email</th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap sticky right-0 z-10 bg-slate-50/90 backdrop-blur border-b border-l border-slate-100">Actions</th>
                 </tr>
@@ -43,7 +43,18 @@
                         <span class="text-[10px] text-slate-300">-</span>
                         @endif
                     </td>
-                    <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->personal_email ?: '-' }}</div></td>
+                    <td class="px-6 py-4">
+                        @php
+                            $outreachStatus = $lead->campaignRecipients->first()?->status;
+                        @endphp
+                        @if($outreachStatus === 'sent')
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-600">Sent</span>
+                        @elseif($outreachStatus === 'drafted')
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-50 text-amber-600">Drafted</span>
+                        @else
+                            <span class="text-[10px] text-slate-300">—</span>
+                        @endif
+                    </td>
                     <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_email ?: '-' }}</div></td>
                     
                     <td class="px-6 py-4 text-right sticky right-0 z-10 bg-white group-hover:bg-slate-50 border-l border-slate-100" @click.stop>

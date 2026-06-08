@@ -147,7 +147,18 @@ $targetUserId = auth()->id();
             });
         }
 
-        $leads = $query->orderBy('created_at', 'desc')->paginate(25)->withQueryString();
+        $user = $request->user();
+
+        $leads = $query
+            ->with(['campaignRecipients' => function ($recipientQuery) use ($user) {
+                $recipientQuery
+                    ->whereIn('status', ['sent', 'drafted'])
+                    ->whereHas('campaign', fn ($campaignQuery) => $campaignQuery->where('user_id', $user->id))
+                    ->orderByDesc('updated_at');
+            }])
+            ->orderBy('created_at', 'desc')
+            ->paginate(25)
+            ->withQueryString();
 
         $templateQuery = \App\Models\EmailTemplate::query();
         if (!auth()->user()->isAdmin()) {

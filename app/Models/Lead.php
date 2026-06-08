@@ -65,4 +65,9 @@ class Lead extends Model
     {
         return $this->hasOne(LeadAutomationDetail::class);
     }
+
+    public function campaignRecipients()
+    {
+        return $this->hasMany(CampaignRecipient::class);
+    }
 }
