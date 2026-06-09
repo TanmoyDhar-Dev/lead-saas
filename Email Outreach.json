@@ -1,0 +1,394 @@
+{
+  "name": "Email Outreach",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/email-outreach",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -544,
+        -48
+      ],
+      "id": "d3d17439-7053-4685-bb76-5f00b236e7c8",
+      "name": "Webhook",
+      "webhookId": "d141d91c-0a91-46e2-a70a-777b4fdeb589"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Please research this lead and generate a highly personalized \"hyperLine\". The line must prove we did our homework by mentioning a recent corporate event or milestone, and it must tie that event to the challenges they likely face in their specific role.\n\n### TEMPORAL CONTEXT:\n- Current Date: {{ $now.toFormat('yyyy-MM-dd') }}\n- Target Year for News: {{ $now.toFormat('yyyy') }}\n\n### SENDER CONTEXT:\n- My Name: {{ $json.body.sender_context.senderName }}\n- My Company: {{ $json.body.sender_context.senderCompany }}\n\n### TARGET LEAD CONTEXT:\n- Lead Name: {{ $json.body.lead_context.fullName }}\n- Lead's Exact Role: {{ $json.body.lead_context.position }}\n- Target Company: {{ $json.body.lead_context.companyName }}\n- Website: {{ $json.body.lead_context.companyWebsite }}\n- Company Linkedin Post:  {{ $json.body.lead_context.companyLinkedin }}/posts/?feedView=all\n- Company Context: {{ $json.body.lead_context.companyDescription }}\n\n### INSTRUCTIONS:\n1. Search for news regarding {{ $json.body.lead_context.companyName }} in {{ $now.toFormat('yyyy') }} (or late {{ $now.minus({years: 1}).toFormat('yyyy') }}).\n2. Write a single sentence that mentions a specific recent finding AND relates it to what they must be focusing on as the {{ $json.body.lead_context.position }}.\n3. Ensure the sentence flows naturally so it can be seamlessly pasted into the very beginning of my email body.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are an elite B2B sales intelligence agent. Your objective is to research a lead and generate a \"hyperLine\"—a single, highly customized introductory sentence for a cold email. \n\nThe recipient must immediately feel that you understand their specific business context, recent achievements, and the challenges associated with their role.\n\nCRITICAL EXECUTION RULES:\n1. SEARCH STRATEGY: Use the \"Gemini Search\" tool to find recent news (within the last 6-12 months) about the company or the individual. Look for product launches, funding, expansions, or podcasts/interviews they have done.\n2. THE FORMULA: Combine [A specific, recent fact] with [An insight about how that affects their specific role].\n3. TONE & STYLE: Conversational, professional, and insightful. Never sound like an AI summarizing a news article. Do not use generic praise. \n4. NO CREEPINESS: Keep the observation strictly professional and business-focused.\n\nEXAMPLES OF BAD VS. GOOD HYPERLINES:\n- BAD (Generic): \"I saw your website and noticed Salus helps with safety.\"\n- BAD (News Summary): \"I read in the news that Salus recently launched a new compliance portal.\"\n- GOOD (Deep Personalization): \"Noticed Salus's recent push into digital compliance tracking—leading that shift as the owner must mean you're managing a massive transition with subcontractor adoption right now.\"\n- GOOD (Deep Personalization): \"Huge congratulations on the recent seed round; I imagine scaling the engineering team is top of mind for you as CTO this quarter.\"\n\n5. OUTPUT: Your output must strictly match the JSON schema provided by your Output Parser."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -272,
+        -48
+      ],
+      "id": "2e24ff28-f235-40e0-9bc4-33c3481fd2a1",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d517ea7d-2c75-45aa-84c7-0e710a105eeb",
+              "leftValue": "={{ $json.delivery_mode }}",
+              "rightValue": "send",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        368,
+        -48
+      ],
+      "id": "af292b12-f3c5-4977-8820-0a1d73396cb5",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/me/sendMail",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.ms_graph_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.ms_graph_send_payload }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        592,
+        -144
+      ],
+      "id": "9c28454a-a042-4a33-93cf-30579466517d",
+      "name": "Sent Email"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/me/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.ms_graph_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.ms_graph_draft_payload }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        592,
+        48
+      ],
+      "id": "14a6e97e-7881-44cc-ac1a-aff26e9fddce",
+      "name": "Draft Email"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"hyperLine\":\"string\",\n    \"news_summary\":\"string\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -64,
+        176
+      ],
+      "id": "9e07fcac-0b67-4496-9219-d64031a9e142",
+      "name": "Structured Output"
+    },
+    {
+      "parameters": {
+        "toolDescription": "=Useful for searching the live web for the latest news articles, recent product updates, recent investment rounds, and structural updates regarding a specific person or corporate entity. Always pass the current year in your search query to get the most up-to-date results.",
+        "query": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Query', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-gemini-search.geminiSearchToolTool",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        176
+      ],
+      "id": "96ff1ad1-60ff-4b21-9a0c-a3f7434dd013",
+      "name": "Gemini Search",
+      "credentials": {
+        "geminiSearchApi": {
+          "id": "GF96m7EL8trLe5QW",
+          "name": "Gemini Credentials account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        176
+      ],
+      "id": "e8e3a651-5984-4c6d-892e-e91949ffe41a",
+      "name": "LLM",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ScXOXFYFEH8pOHsV",
+          "name": "Mehrab Gemini Pro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Extract data from the Webhook and AI Agent\nconst webhookData = $('Webhook').first().json.body;\nconst aiData = $json.output;\n\n// 2. Formatting: Convert \"Enter\" keystrokes to HTML line breaks\nconst baseBody = (webhookData.campaign_context.mainBody || \"\").replace(/\\n/g, \"<br>\");\nconst aiLine = aiData.hyperLine || \"\";\nconst trackingId = webhookData.system_context.tracking_id;\nconst isSendMode = webhookData.system_context.delivery_mode === \"send\";\n// Only build the tracking pixel if we are actually sending the email!\nconst pixel = isSendMode ? `<img src=' https://disarmingly-dashing-floy.ngrok-free.dev/t/o/${trackingId}.gif' width='1' height='1' style='display:none;' />` : \"\";\n\n// 3. Inject the AI Hyperline into the exact placeholder spot\nlet finalContent = \"\";\nconst placeholder = \"{{hyperline}}\";\n\nif (baseBody.includes(placeholder)) {\n    finalContent = baseBody.replace(placeholder, aiLine);\n} else {\n    finalContent = aiLine + \"<br><br>\" + baseBody;\n}\n\n// 4. Build the Professional Email Signature\nconst senderName = webhookData.sender_context.senderName || \"\";\nconst senderRole = webhookData.sender_context.senderRole || \"\";\nconst senderCompany = webhookData.sender_context.senderCompany || \"\";\nconst senderAddress = webhookData.sender_context.senderAddress || \"\";\n\nconst signatureHtml = `<br><br>--<br><strong>${senderName}</strong><br>${senderRole} | ${senderCompany}<br>${senderAddress}`;\n\n// 5. Build the core Microsoft Graph Message Object\nconst coreMessage = {\n    subject: webhookData.campaign_context.subject,\n    body: {\n        contentType: \"HTML\",\n        content: finalContent + signatureHtml + \"<br><br>\" + pixel\n    },\n    toRecipients: [\n        {\n            emailAddress: {\n                address: webhookData.lead_context.email\n            }\n        }\n    ]\n};\n\n// 6. Dynamic Attachment Logic\nconst attachmentData = webhookData.campaign_context.attachment;\n\n// If Laravel provided an encoded file, inject it perfectly into the Microsoft Payload\nif (attachmentData && attachmentData.contentBytes) {\n    coreMessage.hasAttachments = true;\n    coreMessage.attachments = [\n        {\n            \"@odata.type\": \"#microsoft.graph.fileAttachment\",\n            \"name\": attachmentData.name || \"document.pdf\",\n            \"contentType\": attachmentData.contentType || \"application/pdf\",\n            \"contentBytes\": attachmentData.contentBytes\n        }\n    ];\n}\n\n// 7. Output the perfectly clean payloads to the next nodes\nreturn {\n    ms_graph_send_payload: { message: coreMessage, saveToSentItems: \"true\" },\n    ms_graph_draft_payload: coreMessage,\n    ms_graph_token: webhookData.system_context.microsoft_access_token,\n    delivery_mode: webhookData.system_context.delivery_mode,\n    callback_data: {\n        campaign_recipient_id: webhookData.system_context.campaign_recipient_id,\n        hyper_personalized_line: aiLine,\n        news_summary: aiData.news_summary\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -48
+      ],
+      "id": "1c742df0-af59-4616-b03d-bc2c4124da80",
+      "name": "Compile Payloads"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://disarmingly-dashing-floy.ngrok-free.dev/webhooks/n8n/delivery-callback",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"campaign_recipient_id\": $('Compile Payloads').item.json.callback_data.campaign_recipient_id,\n    \"status\": $('Compile Payloads').item.json.delivery_mode === 'send' ? 'sent' : 'drafted',\n    \"hyper_personalized_line\": $('Compile Payloads').item.json.callback_data.hyper_personalized_line,\n    \"subject\": $json.subject,\n    \"final_email_body\": $json.body.content,\n    \"news_summary\": $('Compile Payloads').item.json.callback_data.news_summary,\n    \"drafted_at\": $now\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        800,
+        48
+      ],
+      "id": "dd0b3616-c25a-4955-867e-44932cb45696",
+      "name": "Callback to Laravel (Drafted)",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "6ZXzvONZWECGE1hA",
+          "name": "Lead Outreach Callback"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://disarmingly-dashing-floy.ngrok-free.dev/webhooks/n8n/delivery-callback",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"campaign_recipient_id\": $('Compile Payloads').item.json.callback_data.campaign_recipient_id,\n    \"status\": $('Compile Payloads').item.json.delivery_mode === 'send' ? 'sent' : 'drafted',\n    \"hyper_personalized_line\": $('Compile Payloads').item.json.callback_data.hyper_personalized_line,\n    \"subject\": $json.subject,\n    \"final_email_body\": $json.body.content,\n    \"news_summary\": $('Compile Payloads').item.json.callback_data.news_summary,\n    \"sent_at\": $now\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        800,
+        -144
+      ],
+      "id": "90e31325-9b42-4e70-a8ca-e6aa96fdcf6e",
+      "name": "Callback to Laravel (Sent)",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "6ZXzvONZWECGE1hA",
+          "name": "Lead Outreach Callback"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Compile Payloads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Sent Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Draft Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Search": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sent Email": {
+      "main": [
+        [
+          {
+            "node": "Callback to Laravel (Sent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Email": {
+      "main": [
+        [
+          {
+            "node": "Callback to Laravel (Drafted)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Payloads": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Dhaka",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "cc7ab72d-550d-4745-94ba-fb36ee24f67b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3a8e012802f256258478d64da1b16909abecf4f288a904a823a76f9e7910b8b4"
+  },
+  "id": "EMP7Hf-l9xegRsSv3ys-p",
+  "tags": []
+}
