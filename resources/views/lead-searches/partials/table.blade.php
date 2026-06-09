@@ -4,7 +4,7 @@
             <thead>
                 <tr class="bg-slate-50/50 border-b border-slate-100">
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date / Time</th>
-                    <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Owner</th>
+                    {{-- <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Owner</th> --}}
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target Location</th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Industry</th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Position</th>
@@ -24,7 +24,7 @@
                         <div class="text-[10px] text-slate-400">{{ $date->format('h:i A') }}</div>
                     </td>
                     
-                    <td class="px-6 py-4">
+                    {{-- <td class="px-6 py-4">
                         @if(Auth::user()->isAdmin())
                             <div class="flex items-center">
                                 <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-[10px] mr-2">
@@ -38,7 +38,7 @@
                         @else
                             <span class="text-xs text-slate-600 font-medium">You</span>
                         @endif
-                    </td>
+                    </td> --}}
 
                     <td class="px-6 py-4">
                         @php
