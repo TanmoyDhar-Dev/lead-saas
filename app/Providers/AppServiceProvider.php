@@ -23,11 +23,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Event::listen(SocialiteWasCalled::class, AzureExtendSocialite::class.'@handle');
+        Event::listen(SocialiteWasCalled::class, AzureExtendSocialite::class.'@handle');
 
-        // if ($appUrl = config('app.url')) {
-        //     URL::forceRootUrl(rtrim($appUrl, '/'));
-        // }
+        if ($appUrl = config('app.url')) {
+            URL::forceRootUrl(rtrim($appUrl, '/'));
+        }
 
         // Force HTTPS if your APP_URL starts with https://
         if (str_contains(config('app.url'), 'https://')) {
