@@ -179,6 +179,12 @@ class N8nEmailProcessService
 
             if ($response->successful()) {
                 $recipient->update(['status' => 'queued']);
+            } else {
+                $recipient->update([
+                    'status' => 'failed',
+                    'failed_at' => now(),
+                    'failed_reason' => 'Received non-success HTTP status from n8n email webhook.',
+                ]);
             }
 
             return [
@@ -189,6 +195,12 @@ class N8nEmailProcessService
                 'error' => $response->successful() ? null : 'Received non-success HTTP status from n8n email webhook.',
             ];
         } catch (Throwable $e) {
+            $recipient->update([
+                'status' => 'failed',
+                'failed_at' => now(),
+                'failed_reason' => $e->getMessage(),
+            ]);
+
             return [
                 'campaign_recipient_id' => $recipient->id,
                 'successful' => false,

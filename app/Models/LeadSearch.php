@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Lead;
+use App\Models\LeadUser;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -42,6 +43,35 @@ class LeadSearch extends Model
     public function leads()
     {
         return $this->hasMany(Lead::class, 'lead_search_id');
+    }
+
+    public function leadAccessors()
+    {
+        return $this->hasMany(LeadUser::class, 'lead_search_id');
+    }
+
+    public function scopedLeads(): Builder
+    {
+        return Lead::query()->whereIn('id', function ($query) {
+            $query->select('lead_id')
+                ->from('lead_user')
+                ->where('lead_search_id', $this->id);
+        });
+    }
+
+    public function detachLeadsForSearch(): void
+    {
+        $leadIds = $this->leadAccessors()->pluck('lead_id');
+
+        $this->leadAccessors()->delete();
+
+        foreach ($leadIds as $leadId) {
+            $stillShared = LeadUser::where('lead_id', $leadId)->exists();
+
+            if (! $stillShared) {
+                Lead::where('id', $leadId)->delete();
+            }
+        }
     }
 
     public function scopeVisibleTo(Builder $query, User $user): Builder

@@ -117,10 +117,7 @@ class LeadController extends Controller
             'lead_ids.*' => 'string'
         ]);
 
-        $query = Lead::whereIn('id', $request->lead_ids);
-        if (!auth()->user()->isAdmin()) {
-            $query->where('user_id', auth()->id());
-        }
+        $query = Lead::visibleTo(auth()->user())->whereIn('id', $request->lead_ids);
         $deletedCount = $query->delete();
 
         return redirect()->back()->with('success', "{$deletedCount} lead(s) deleted successfully.");

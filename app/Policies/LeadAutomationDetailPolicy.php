@@ -26,7 +26,7 @@ class LeadAutomationDetailPolicy
     {
         $lead = $detail->lead;
         $campaign = $detail->campaign;
-        return ($lead && $lead->user_id === $user->id) || ($campaign && $campaign->user_id === $user->id);
+        return ($lead && $lead->isAccessibleBy($user)) || ($campaign && $campaign->user_id === $user->id);
     }
 
     public function create(User $user)

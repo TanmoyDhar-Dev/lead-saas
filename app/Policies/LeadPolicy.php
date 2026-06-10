@@ -24,7 +24,7 @@ class LeadPolicy
 
     public function view(User $user, Lead $lead)
     {
-        return $user->id === $lead->user_id;
+        return $lead->isAccessibleBy($user);
     }
 
     public function create(User $user)
@@ -34,7 +34,7 @@ class LeadPolicy
 
     public function update(User $user, Lead $lead)
     {
-        return $user->id === $lead->user_id;
+        return $lead->isAccessibleBy($user);
     }
 
     public function delete(User $user, Lead $lead)

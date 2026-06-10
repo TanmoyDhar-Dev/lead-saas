@@ -248,8 +248,11 @@
                 },
                 files: [],
                 
+                outreachPollInterval: null,
+
                 init() {
                     window.leadManager = this;
+                    this.syncOutreachPolling();
                     
                     const defaultTemplate = this.templatesData.find(t => t.is_default);
                     if (defaultTemplate) {
@@ -276,8 +279,46 @@
                     }
                 },
 
-                fetchLeads() {
-                    this.loading = true;
+                hasPendingOutreach() {
+                    const container = document.getElementById('leads-container')?.firstElementChild;
+
+                    return container?.dataset?.hasPendingOutreach === '1';
+                },
+
+                syncOutreachPolling() {
+                    if (this.hasPendingOutreach()) {
+                        this.startOutreachPolling();
+                    } else if (this.outreachPollInterval) {
+                        clearInterval(this.outreachPollInterval);
+                        this.outreachPollInterval = null;
+                    }
+                },
+
+                startOutreachPolling() {
+                    if (this.outreachPollInterval) {
+                        return;
+                    }
+
+                    this.outreachPollInterval = setInterval(() => {
+                        if (document.activeElement?.matches('input[type="text"], textarea')) {
+                            return;
+                        }
+
+                        if (!this.hasPendingOutreach()) {
+                            clearInterval(this.outreachPollInterval);
+                            this.outreachPollInterval = null;
+                            return;
+                        }
+
+                        this.fetchLeads(true);
+                    }, 5000);
+                },
+
+                fetchLeads(isSilent = false) {
+                    if (!isSilent) {
+                        this.loading = true;
+                    }
+
                     let params = new URLSearchParams(this.filters);
                     
                     fetch("{{ route('lead-searches.leads', $leadSearch) }}?" + params.toString(), {
@@ -291,12 +332,12 @@
                         if (window.Alpine && typeof window.Alpine.initTree === 'function') {
                             window.Alpine.initTree(document.getElementById('leads-container'));
                         }
-                        // Update total count from the new HTML
                         const container = document.querySelector('[data-total-count]');
                         if (container) {
                             this.totalLeadsCount = parseInt(container.getAttribute('data-total-count'));
                         }
-                        
+
+                        this.syncOutreachPolling();
                         this.loading = false;
                     })
                     .catch(() => {

@@ -1,24 +1,20 @@
-# n8n Supabase Lead Ownership Fix
+# Lead Ownership on Duplicate Scrapes
 
-To ensure that leads scraped by n8n immediately appear in the Laravel frontend for the user who initiated the search, you must update the n8n Lead Scraping workflow. 
+When multiple users scrape the same LinkedIn profile, n8n upserts on `linkedin_url`. Without protection, the latest scrape overwrote `user_id` and `lead_search_id`.
 
-Currently, n8n inserts leads with `user_id = null`, and Laravel runs a cron/fallback routine to "claim" them based on search parameters and time. While this works, it can be fragile.
+## How it works now
 
-**The Fix:**
-Laravel now sends `user_id` and `lead_search_id` in the webhook payload. Update the n8n Postgres/Supabase DB insert node to map these directly:
+1. **`lead_user` pivot** — Each user–lead pair is stored with the `lead_search_id` that discovered it. Both users see the lead in their respective search results.
+2. **PostgreSQL triggers** (production Supabase) — On upsert conflict:
+   - Original `user_id` and `lead_search_id` on `leads` are preserved.
+   - The scraping user is added to `lead_user` so the lead appears in their search.
+3. **Laravel visibility** — `Lead::visibleTo()` and search result queries use owned + shared leads.
 
-1. Open your Lead Scraping workflow in n8n.
-2. Open the Postgres node that upserts into the `public.leads` table.
-3. Add the following column mappings:
+No n8n workflow changes are required; existing Postgres upsert nodes continue to work.
 
-```
-user_id:
-={{ $('Lead Search Trigger').first().json.body.user_id || null }}
+## Migrations
 
-source:
-n8n_search
-```
+- `2026_06_07_000001_create_lead_user_table.php` — pivot + backfill
+- `2026_06_07_000002_add_lead_ownership_triggers.php` — PostgreSQL triggers only
 
-*(Note: Replace `'Lead Search Trigger'` with the actual name of your starting Webhook node if it is different).*
-
-Once mapped, every lead inserted by n8n will immediately have the correct `user_id`, completely bypassing the need for Laravel to "guess" and claim leads retroactively.
+Run `php artisan migrate` on each environment using PostgreSQL.

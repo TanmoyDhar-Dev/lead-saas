@@ -27,11 +27,11 @@ class DashboardController extends Controller
         }
 
         $stats = [
-            'total_leads' => Lead::where('user_id', $user->id)->count(),
+            'total_leads' => Lead::visibleTo($user)->count(),
             'total_searches' => LeadSearch::where('user_id', $user->id)->count(),
         ];
 
-        $latestLeads = Lead::where('user_id', $user->id)->orderByDesc('created_at')->take(5)->get();
+        $latestLeads = Lead::visibleTo($user)->orderByDesc('created_at')->take(5)->get();
         $latestSearches = LeadSearch::where('user_id', $user->id)->orderByDesc('created_at')->take(5)->get();
 
         return view('dashboard', compact('stats', 'latestLeads', 'latestSearches', 'emailStats'));

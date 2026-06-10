@@ -1,4 +1,11 @@
-<div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden" data-total-count="{{ $leads->total() }}">
+@php
+    $hasPendingOutreach = $leads->contains(function ($lead) {
+        return in_array($lead->campaignRecipients->first()?->status, ['pending', 'queued'], true);
+    });
+@endphp
+<div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden"
+     data-total-count="{{ $leads->total() }}"
+     data-has-pending-outreach="{{ $hasPendingOutreach ? '1' : '0' }}">
     <div class="p-0 overflow-x-auto">
         <table class="w-full text-left border-collapse min-w-[1000px]">
             <thead>
@@ -43,19 +50,8 @@
                         <span class="text-[10px] text-slate-300">-</span>
                         @endif
                     </td>
-                    <td class="px-6 py-4">
-                        @php
-                            $outreachStatus = $lead->campaignRecipients->first()?->status;
-                        @endphp
-                        @if($outreachStatus === 'sent')
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-600">Sent</span>
-                        @elseif($outreachStatus === 'drafted')
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-50 text-amber-600">Drafted</span>
-                        @elseif($outreachStatus === 'failed')
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-50 text-red-600">Failed</span>
-                        @else
-                            <span class="text-[10px] text-slate-300">—</span>
-                        @endif
+                    <td class="px-6 py-4" data-outreach-status="{{ $lead->campaignRecipients->first()?->status ?? '' }}">
+                        @include('leads.partials.outreach-status-badge', ['lead' => $lead])
                     </td>
                     <td class="px-6 py-4"><div class="text-xs font-medium text-slate-700 whitespace-nowrap">{{ $lead->company_email ?: '-' }}</div></td>
                     
@@ -78,7 +74,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="px-6 py-16 text-center">
+                    <td colspan="8" class="px-6 py-16 text-center">
                         <p class="text-slate-400 text-sm font-medium">No leads found matching your criteria.</p>
                     </td>
                 </tr>

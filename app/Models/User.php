@@ -91,7 +91,10 @@ class User extends Authenticatable
 
     public function hasReachedLeadStorageLimit(): bool
     {
-        if (is_null($this->lead_storage_limit)) return false;
-        return $this->leads()->count() >= $this->lead_storage_limit;
+        if (is_null($this->lead_storage_limit)) {
+            return false;
+        }
+
+        return Lead::visibleTo($this)->count() >= $this->lead_storage_limit;
     }
 }

@@ -18,7 +18,7 @@ class LeadSearchController extends Controller
 {
     public function index(Request $request)
     {
-        $query = LeadSearch::visibleTo(auth()->user())->withCount('leads')->orderByDesc('created_at');
+        $query = LeadSearch::visibleTo(auth()->user())->withCount(['leadAccessors as leads_count'])->orderByDesc('created_at');
         
         // Filters
         if ($targetLocation = $request->input('target_location')) {
@@ -133,7 +133,7 @@ $targetUserId = auth()->id();
         // Do not run orphan backfill here: unbounded ILIKE + UPDATE across the leads table
         // can exceed PHP max_execution_time. Use `php artisan lead-search:attach-orphans {id}` if needed.
 
-        $query = Lead::where('lead_search_id', $leadSearch->id);
+        $query = $leadSearch->scopedLeads();
 
         // Local filter/search
         if ($q = $request->input('q')) {
@@ -147,13 +147,12 @@ $targetUserId = auth()->id();
             });
         }
 
-        $user = $request->user();
+        $outreachUserId = $leadSearch->user_id;
 
         $leads = $query
-            ->with(['campaignRecipients' => function ($recipientQuery) use ($user) {
+            ->with(['campaignRecipients' => function ($recipientQuery) use ($outreachUserId) {
                 $recipientQuery
-                    ->whereIn('status', ['sent', 'drafted', 'failed'])
-                    ->whereHas('campaign', fn ($campaignQuery) => $campaignQuery->where('user_id', $user->id))
+                    ->whereHas('campaign', fn ($campaignQuery) => $campaignQuery->where('user_id', $outreachUserId))
                     ->orderByDesc('updated_at');
             }])
             ->orderBy('created_at', 'desc')
@@ -178,13 +177,13 @@ $targetUserId = auth()->id();
      */
     public function leadJson(LeadSearch $leadSearch, Lead $lead)
     {
-        if (!auth()->user()->isAdmin()) {
-            if ($leadSearch->user_id !== auth()->id() || $lead->user_id !== auth()->id()) {
+        if (! auth()->user()->isAdmin()) {
+            if ($leadSearch->user_id !== auth()->id() || ! $lead->isAccessibleBy(auth()->user())) {
                 abort(403, 'Unauthorized access to this lead.');
             }
         }
 
-        if ($lead->lead_search_id !== $leadSearch->id) {
+        if (! $lead->isLinkedToSearch($leadSearch)) {
             abort(404, 'Lead not found for this search.');
         }
 
@@ -227,9 +226,7 @@ $targetUserId = auth()->id();
             abort(403);
         }
 
-        // Associated leads should be deleted. 
-        // If we want to be explicit instead of relying on cascade:
-        $leadSearch->leads()->delete();
+        $leadSearch->detachLeadsForSearch();
         $leadSearch->delete();
 
         return back()->with('success', 'Search record and associated leads deleted successfully.');
