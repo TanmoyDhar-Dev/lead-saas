@@ -127,6 +127,7 @@ class N8nEmailProcessService
                 'tracking_id' => $recipient->tracking_id,
                 'delivery_mode' => $deliveryMode,
                 'microsoft_access_token' => $microsoftAccessToken,
+                'app_url' => rtrim((string) config('app.url'), '/'),
             ],
             'sender_context' => [
                 'senderName' => (string) ($sender?->sender_name ?? ''),
@@ -173,7 +174,6 @@ class N8nEmailProcessService
         try {
             $response = Http::withoutVerifying()
                 ->timeout($timeout)
-                ->retry(2, 2000)
                 ->asJson()
                 ->post($webhookUrl, $payload);
 

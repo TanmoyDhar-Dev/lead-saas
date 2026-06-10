@@ -152,7 +152,7 @@ $targetUserId = auth()->id();
         $leads = $query
             ->with(['campaignRecipients' => function ($recipientQuery) use ($user) {
                 $recipientQuery
-                    ->whereIn('status', ['sent', 'drafted'])
+                    ->whereIn('status', ['sent', 'drafted', 'failed'])
                     ->whereHas('campaign', fn ($campaignQuery) => $campaignQuery->where('user_id', $user->id))
                     ->orderByDesc('updated_at');
             }])
@@ -321,8 +321,7 @@ $targetUserId = auth()->id();
             return back()->withErrors(['dispatch' => $error]);
         }
 
-        $mode = $deliveryMode === 'send' ? 'Sending' : 'Drafting';
-        $message = "Automation Sequence Initiated: {$mode} emails for {$result['dispatched']} leads.";
+        $message = "Outreach queued for {$result['dispatched']} leads. Emails will be processed in the background.";
 
         if ($result['failed'] > 0) {
             $message .= " {$result['failed']} lead(s) could not be dispatched.";

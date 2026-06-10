@@ -18,13 +18,15 @@ class N8nDeliveryCallbackController extends Controller
             'news_summary' => 'nullable|string',
             'subject' => 'nullable|string',
             'final_email_body' => 'nullable|string',
+            'failed_reason' => 'nullable|string',
             'sent_at' => 'nullable|date',
             'drafted_at' => 'nullable|date',
+            'failed_at' => 'nullable|date',
         ]);
 
         $recipient = CampaignRecipient::findOrFail($validated['campaign_recipient_id']);
 
-        $recipient->update([
+        $updates = [
             'status' => $validated['status'],
             'hyper_personalized_line' => $validated['hyper_personalized_line'] ?? null,
             'news_summary' => $validated['news_summary'] ?? null,
@@ -36,7 +38,16 @@ class N8nDeliveryCallbackController extends Controller
             'drafted_at' => isset($validated['drafted_at'])
                 ? Carbon::parse($validated['drafted_at'])
                 : null,
-        ]);
+        ];
+
+        if ($validated['status'] === 'failed') {
+            $updates['failed_at'] = isset($validated['failed_at'])
+                ? Carbon::parse($validated['failed_at'])
+                : now();
+            $updates['failed_reason'] = $validated['failed_reason'] ?? null;
+        }
+
+        $recipient->update($updates);
 
         return response()->json([
             'message' => 'Campaign recipient updated successfully.',
