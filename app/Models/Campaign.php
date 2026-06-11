@@ -22,12 +22,8 @@ class Campaign extends Model
         'sender_identity_id',
         'name',
         'delivery_mode',
-        'search_window',
         'email_main_body',
         'email_signature',
-        'daily_limit',
-        'scheduled_at',
-        'status',
         'n8n_response',
         'error_message',
         'sent_to_n8n_at',
@@ -37,7 +33,6 @@ class Campaign extends Model
     {
         return [
             'n8n_response' => 'array',
-            'scheduled_at' => 'datetime',
             'sent_to_n8n_at' => 'datetime',
         ];
     }

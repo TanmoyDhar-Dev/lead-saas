@@ -239,6 +239,10 @@ class N8nEmailProcessService
             'mainBody' => $mainBody,
         ];
 
+        if (filled($campaign->email_signature)) {
+            $context['emailSignature'] = (string) $campaign->email_signature;
+        }
+
         $attachments = $this->resolveCampaignAttachments($campaign);
 
         if (count($attachments) === 1) {

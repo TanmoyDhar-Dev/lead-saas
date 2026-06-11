@@ -275,7 +275,7 @@ $targetUserId = auth()->id();
                 'name' => 'Outreach '.now()->format('M d, Y H:i'),
                 'delivery_mode' => $deliveryMode,
                 'email_main_body' => $validated['body'],
-                'status' => 'pending',
+                'email_signature' => $this->buildEmailSignature($validated, $senderIdentity),
                 'n8n_response' => [
                     'attachments' => $attachmentPaths,
                     'sender_address' => trim((string) ($validated['sender_address'] ?? '')),
@@ -298,17 +298,19 @@ $targetUserId = auth()->id();
         $result = $n8nEmailService->send($campaign->fresh(['campaignRecipients.lead', 'senderIdentity']));
 
         $campaign->update([
-            'status' => match (true) {
-                $result['successful'] => 'processing',
-                $result['dispatched'] > 0 => 'partial',
-                default => 'failed',
-            },
             'error_message' => $result['failed'] > 0
                 ? collect($result['results'])->pluck('error')->filter()->first()
                 : null,
             'n8n_response' => array_merge(
                 (array) ($campaign->n8n_response ?? []),
-                ['dispatch' => $result],
+                [
+                    'dispatch' => $result,
+                    'dispatch_state' => match (true) {
+                        $result['successful'] => 'processing',
+                        $result['dispatched'] > 0 => 'partial',
+                        default => 'failed',
+                    },
+                ],
             ),
         ]);
 
@@ -325,6 +327,30 @@ $targetUserId = auth()->id();
         }
 
         return back()->with('success', $message);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function buildEmailSignature(array $validated, ?SenderIdentity $senderIdentity): ?string
+    {
+        $senderName = trim((string) ($validated['sender_name'] ?? '')) ?: trim((string) ($senderIdentity?->sender_name ?? ''));
+        $senderRole = trim((string) ($validated['sender_role'] ?? '')) ?: trim((string) ($senderIdentity?->sender_role ?? ''));
+        $senderCompany = trim((string) ($validated['sender_company'] ?? '')) ?: trim((string) ($senderIdentity?->sender_company ?? ''));
+        $senderAddress = trim((string) ($validated['sender_address'] ?? ''));
+
+        if ($senderName === '' && $senderRole === '' && $senderCompany === '' && $senderAddress === '') {
+            $stored = trim((string) ($senderIdentity?->email_signature ?? ''));
+
+            return $stored !== '' ? $stored : null;
+        }
+
+        $name = e($senderName);
+        $role = e($senderRole);
+        $company = e($senderCompany);
+        $address = e($senderAddress);
+
+        return "<br><br>--<br><strong>{$name}</strong><br>{$role}".($role !== '' && $company !== '' ? ' | ' : '')."{$company}<br>{$address}";
     }
 
     /**

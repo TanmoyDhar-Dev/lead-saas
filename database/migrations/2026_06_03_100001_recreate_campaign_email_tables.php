@@ -32,19 +32,14 @@ return new class extends Migration
             $table->foreignUuid('sender_identity_id')->nullable()->constrained('sender_identities')->nullOnDelete();
             $table->string('name');
             $table->string('delivery_mode')->default('draft');
-            $table->string('search_window')->default('qdr:m3');
             $table->text('email_main_body');
             $table->text('email_signature')->nullable();
-            $table->integer('daily_limit')->nullable();
-            $table->timestamp('scheduled_at')->nullable();
-            $table->string('status')->default('draft');
             $table->json('n8n_response')->nullable();
             $table->text('error_message')->nullable();
             $table->timestamp('sent_to_n8n_at')->nullable();
             $table->timestamps();
 
             $table->index('user_id');
-            $table->index('status');
             $table->index('delivery_mode');
             $table->index('created_at');
         });
