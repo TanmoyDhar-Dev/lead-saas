@@ -31,6 +31,7 @@
                     <select x-model="filters.status" @change="fetchUsers()" class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-2.5">
                         <option value="">All Statuses</option>
                         <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
                         <option value="suspended">Suspended</option>
                     </select>
                 </div>
@@ -43,11 +44,13 @@
         </div>
 
         <!-- Users Table Container -->
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative" id="users-table-container">
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative">
             <div x-show="tableLoading" class="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-20" x-cloak>
                 <div class="animate-spin w-8 h-8 border-4 border-brand-blue border-t-transparent rounded-full"></div>
             </div>
-            @include('admin.users.partials.table', ['users' => $users])
+            <div id="users-table-body">
+                @include('admin.users.partials.table', ['users' => $users])
+            </div>
         </div>
 
         <!-- Edit Profile Modal -->
@@ -90,9 +93,13 @@
                                 <option value="suspended">Suspended</option>
                             </select>
                         </div>
-                        <div class="col-span-2">
+                        <div>
                             <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">New Password (Optional)</label>
                             <input type="password" name="password" placeholder="Leave blank to keep current" class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-2.5">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Confirm Password</label>
+                            <input type="password" name="password_confirmation" placeholder="Repeat new password" class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-2.5">
                         </div>
                     </div>
 
@@ -201,8 +208,13 @@
                         });
                         if (response.ok) {
                             const html = await response.text();
-                            document.getElementById('users-table-container').innerHTML = html;
-                            
+                            const tableBody = document.getElementById('users-table-body');
+                            tableBody.innerHTML = html;
+
+                            if (window.Alpine && typeof window.Alpine.initTree === 'function') {
+                                window.Alpine.initTree(tableBody);
+                            }
+
                             // Update browser URL without refresh
                             if (!url) {
                                 window.history.pushState({}, '', targetUrl);

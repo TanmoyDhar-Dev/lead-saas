@@ -1,10 +1,17 @@
+@php
+    $userPayloadFields = [
+        'id', 'name', 'email', 'role', 'status',
+        'lead_search_limit', 'lead_export_limit', 'lead_storage_limit',
+        'email_send_limit', 'notes',
+    ];
+@endphp
 <div class="p-0 overflow-x-auto">
     <table class="w-full text-left border-collapse">
         <thead>
             <tr class="bg-slate-50/50 border-b border-slate-100">
                 <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">User Information</th>
                 <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Role & Status</th>
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Limits (S/E/St/C/E)</th>
+                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Limits (Search / Export / Storage / Email)</th>
                 <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Joined</th>
                 <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
             </tr>
@@ -28,14 +35,19 @@
                         <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold w-fit {{ $user->role === 'admin' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700' }}">
                             {{ strtoupper($user->role) }}
                         </span>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold w-fit {{ $user->status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700' }}">
+                        <span @class([
+                            'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold w-fit',
+                            'bg-emerald-50 text-emerald-700' => $user->status === 'active',
+                            'bg-amber-50 text-amber-700' => $user->status === 'inactive',
+                            'bg-red-50 text-red-700' => ! in_array($user->status, ['active', 'inactive'], true),
+                        ])>
                             {{ strtoupper($user->status) }}
                         </span>
                     </div>
                 </td>
                 <td class="px-6 py-4 text-center">
                     @if($user->role !== 'admin')
-                        <button @click="openEditLimits({{ json_encode($user) }})" class="group/limit">
+                        <button @click="openEditLimits(@js($user->only($userPayloadFields)))" class="group/limit">
                             <div class="text-[10px] font-mono text-slate-500 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 inline-block group-hover/limit:bg-brand-blue group-hover/limit:text-white transition-colors cursor-pointer">
                                 {{ $user->lead_search_limit ?? '∞' }} / {{ $user->lead_export_limit ?? '∞' }} / {{ $user->lead_storage_limit ?? '∞' }} / {{ $user->email_send_limit ?? '∞' }}
                             </div>
@@ -52,7 +64,7 @@
                 <td class="px-6 py-4 text-right">
                     <div class="flex justify-end items-center space-x-2">
                         @if($user->role !== 'admin')
-                            <button @click="openEditProfile({{ json_encode($user) }})" class="p-2 text-slate-400 hover:text-brand-blue transition-colors" title="Edit Profile">
+                            <button @click="openEditProfile(@js($user->only($userPayloadFields)))" class="p-2 text-slate-400 hover:text-brand-blue transition-colors" title="Edit Profile">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                             </button>
                             

@@ -16,7 +16,7 @@
             <div>
                 <h4 class="text-sm font-bold text-blue-900 mb-1">Targeted Lead Extraction</h4>
                 <p class="text-xs text-blue-700 leading-relaxed">
-                    Define your criteria below. Our n8n pipeline will scrape LinkedIn profiles matching your query. Leads will appear in the <b>Leads</b> section as they are collected.
+                    Define your criteria below. Our pipeline will scrape LinkedIn profiles matching your query. Leads will appear in the <b>Leads</b> section as they are collected.
                 </p>
             </div>
         </div>
