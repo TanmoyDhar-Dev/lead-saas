@@ -69,28 +69,6 @@
                     </div>
                 </div>
 
-                {{-- Usage Limits --}}
-                <div class="border-t border-slate-100 pt-6">
-                    <h4 class="font-bold text-slate-700 mb-1">Usage Limits</h4>
-                    <p class="text-xs text-slate-400 mb-4">Leave blank for unlimited access.</p>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        @foreach(['lead_search_limit' => 'Search Limit', 'lead_export_limit' => 'Export Limit', 'lead_storage_limit' => 'Storage Limit', 'email_send_limit' => 'Email Limit'] as $field => $label)
-                        <div class="space-y-1">
-                            <label for="{{ $field }}" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{{ $label }}</label>
-                            <input type="number" name="{{ $field }}" id="{{ $field }}" min="0" value="{{ old($field) }}"
-                                   placeholder="∞"
-                                   class="w-full bg-slate-50 border-slate-200 rounded-2xl text-sm focus:ring-brand-blue focus:border-brand-blue py-2.5 px-4">
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-
-                {{-- Notes --}}
-                <div class="space-y-1">
-                    <label for="notes" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Internal Notes</label>
-                    <textarea name="notes" id="notes" rows="3" class="w-full bg-slate-50 border-slate-200 rounded-2xl text-sm focus:ring-brand-blue focus:border-brand-blue py-3 px-4">{{ old('notes') }}</textarea>
-                </div>
 
                 {{-- Actions --}}
                 <div class="flex items-center justify-between pt-4 border-t border-slate-100">

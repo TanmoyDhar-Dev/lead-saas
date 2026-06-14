@@ -11,7 +11,7 @@
             <tr class="bg-slate-50/50 border-b border-slate-100">
                 <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">User Information</th>
                 <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Role & Status</th>
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Limits (Search / Export / Storage / Email)</th>
+                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Limits</th>
                 <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Joined</th>
                 <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
             </tr>
@@ -47,11 +47,30 @@
                 </td>
                 <td class="px-6 py-4 text-center">
                     @if($user->role !== 'admin')
-                        <button @click="openEditLimits(@js($user->only($userPayloadFields)))" class="group/limit">
-                            <div class="text-[10px] font-mono text-slate-500 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 inline-block group-hover/limit:bg-brand-blue group-hover/limit:text-white transition-colors cursor-pointer">
-                                {{ $user->lead_search_limit ?? '∞' }} / {{ $user->lead_export_limit ?? '∞' }} / {{ $user->lead_storage_limit ?? '∞' }} / {{ $user->email_send_limit ?? '∞' }}
+                        @if($user->userPlan)
+                            <div class="flex flex-col items-center space-y-1.5">
+                                <div class="text-[10px] font-mono font-bold text-slate-700 bg-slate-50 px-3 py-1 rounded-lg border border-slate-200" title="Searches Used / Limit">
+                                    {{ number_format($user->userPlan->searches_used) }} / {{ $user->userPlan->search_limit > 0 ? number_format($user->userPlan->search_limit) : '∞' }}
+                                </div>
+                                @if($user->userPlan->expiry_date)
+                                    @php
+                                        $isPast = now()->startOfDay()->gt($user->userPlan->expiry_date);
+                                        $days = (int) now()->startOfDay()->diffInDays($user->userPlan->expiry_date);
+                                    @endphp
+                                    @if($isPast)
+                                        <span class="text-[9px] font-bold text-red-500 uppercase tracking-wider">Expired</span>
+                                    @elseif($days === 0)
+                                        <span class="text-[9px] font-bold text-amber-500 uppercase tracking-wider">Expires Today</span>
+                                    @else
+                                        <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">{{ $days }} {{ Str::plural('Day', $days) }} Left</span>
+                                    @endif
+                                @else
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">No Expiry</span>
+                                @endif
                             </div>
-                        </button>
+                        @else
+                            <span class="text-[10px] text-slate-400 italic">No Plan Configured</span>
+                        @endif
                     @else
                         <div class="text-[10px] font-bold text-brand-blue bg-blue-50 px-3 py-1 rounded-lg border border-blue-100 inline-block uppercase">
                             UNLIMITED ACCESS
@@ -66,6 +85,16 @@
                         @if($user->role !== 'admin')
                             <button @click="openEditProfile(@js($user->only($userPayloadFields)))" class="p-2 text-slate-400 hover:text-brand-blue transition-colors" title="Edit Profile">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            </button>
+
+                            <button @click="
+                                selectedUserId = '{{ $user->id }}';
+                                selectedUserName = '{{ $user->name }}';
+                                searchLimit = {{ $user->userPlan->search_limit ?? 0 }};
+                                expiryDate = '{{ optional($user->userPlan)->expiry_date ? $user->userPlan->expiry_date->format('Y-m-d') : '' }}';
+                                showPlanModal = true;
+                            " class="p-2 text-slate-400 hover:text-emerald-600 transition-colors" title="Edit Plan">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </button>
                             
                             <form action="{{ route('admin.users.toggle-status', $user) }}" method="POST" class="inline">

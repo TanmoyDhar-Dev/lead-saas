@@ -82,7 +82,12 @@ class LeadSearchController extends Controller
             $validated['position'] = mb_strtolower(trim($validated['position']));
         }
 
-$targetUserId = auth()->id();
+        $targetUserId = auth()->id();
+        $user = auth()->user();
+
+        if ($user->userPlan && ($user->userPlan->searches_used >= $user->userPlan->search_limit || now()->gt($user->userPlan->expiry_date))) {
+            abort(403, 'Plan limits reached or expired.');
+        }
 
         $leadSearch = LeadSearch::create([
             'user_id' => $targetUserId,

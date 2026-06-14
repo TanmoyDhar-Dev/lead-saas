@@ -168,6 +168,50 @@
                 </form>
             </div>
         </div>
+        <!-- Plan Management Modal -->
+        <div x-show="showPlanModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" x-cloak>
+            <div @click="showPlanModal = false" class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
+            <div class="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden transform transition-all border border-white/20"
+                 x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+                <div class="p-6 border-b border-slate-100/50 flex justify-between items-center bg-slate-50/30">
+                    <h3 class="text-lg font-bold text-slate-800">Manage Plan Quotas - <span x-text="selectedUserName"></span></h3>
+                    <button @click="showPlanModal = false" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <form action="{{ route('admin.users.update-plan') }}" method="POST" class="p-6 space-y-4">
+                    @csrf
+                    <input type="hidden" name="user_id" x-model="selectedUserId">
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Search Limit</label>
+                            <input type="number" name="search_limit" x-model.number="searchLimit" required min="0" class="w-full bg-slate-50/50 border-slate-200/50 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-2.5">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Expiration Date (Min 1 Month)</label>
+                            <input type="date" name="expiry_date" x-model="expiryDate" required min="{{ now()->addMonth()->format('Y-m-d') }}" class="w-full bg-slate-50/50 border-slate-200/50 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-2.5">
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Quick Duration Presets</label>
+                        <div class="flex flex-wrap gap-2">
+                            <button @click.prevent="setPresetMonths(1)" class="bg-blue-50 text-brand-blue border border-blue-100 font-bold py-1.5 px-3 rounded-lg text-xs hover:bg-blue-100 transition-colors">1 Month</button>
+                            <button @click.prevent="setPresetMonths(3)" class="bg-blue-50 text-brand-blue border border-blue-100 font-bold py-1.5 px-3 rounded-lg text-xs hover:bg-blue-100 transition-colors">3 Months</button>
+                            <button @click.prevent="setPresetMonths(6)" class="bg-blue-50 text-brand-blue border border-blue-100 font-bold py-1.5 px-3 rounded-lg text-xs hover:bg-blue-100 transition-colors">6 Months</button>
+                            <button @click.prevent="setPresetMonths(12)" class="bg-blue-50 text-brand-blue border border-blue-100 font-bold py-1.5 px-3 rounded-lg text-xs hover:bg-blue-100 transition-colors">12 Months</button>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 flex justify-end space-x-3">
+                        <button type="button" @click="showPlanModal = false" class="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
+                        <button type="submit" class="bg-brand-blue text-white px-8 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20">Save Plan Parameters</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -242,6 +286,17 @@
                 openEditLimits(user) {
                     this.selectedUser = JSON.parse(JSON.stringify(user));
                     this.editLimitsOpen = true;
+                },
+
+                showPlanModal: false, 
+                selectedUserId: '', 
+                selectedUserName: '',
+                searchLimit: 0, 
+                expiryDate: '',
+                setPresetMonths(months) {
+                    let d = new Date();
+                    d.setMonth(d.getMonth() + months);
+                    this.expiryDate = d.toISOString().split('T')[0];
                 }
             }
         }

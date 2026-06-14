@@ -12,6 +12,17 @@ class AdminUserController extends Controller
 {
     public function index(Request $request)
     {
+        // Auto-suspend expired users before loading the view
+        $expiredUsers = User::where('role', '!=', 'admin')
+            ->where('status', 'active')
+            ->whereHas('userPlan', function ($query) {
+                $query->whereNotNull('expiry_date')->where('expiry_date', '<', now());
+            })->get();
+            
+        foreach ($expiredUsers as $expired) {
+            $expired->update(['status' => 'suspended']);
+        }
+
         $query = User::query();
 
         if ($search = $request->input('search')) {
@@ -29,7 +40,7 @@ class AdminUserController extends Controller
             $query->where('status', $status);
         }
 
-        $users = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
+        $users = $query->with('userPlan')->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
 
         if ($request->ajax()) {
             return view('admin.users.partials.table', compact('users'));
@@ -51,11 +62,6 @@ class AdminUserController extends Controller
             'password' => ['required', 'confirmed', Password::defaults()],
             'role' => ['required', 'in:admin,user'],
             'status' => ['required', 'in:active,inactive,suspended'],
-            'lead_search_limit' => ['nullable', 'integer', 'min:0'],
-            'lead_export_limit' => ['nullable', 'integer', 'min:0'],
-            'lead_storage_limit' => ['nullable', 'integer', 'min:0'],
-            'email_send_limit' => ['nullable', 'integer', 'min:0'],
-            'notes' => ['nullable', 'string'],
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
@@ -133,6 +139,33 @@ class AdminUserController extends Controller
         $user->status = $user->status === 'active' ? 'suspended' : 'active';
         $user->save();
 
+        // If admin manually activates an expired user, extend their plan by 1 month automatically
+        if ($user->status === 'active' && $user->userPlan && $user->userPlan->expiry_date && now()->greaterThan($user->userPlan->expiry_date)) {
+            $user->userPlan->update([
+                'expiry_date' => now()->addMonth()
+            ]);
+            return back()->with('success', 'User activated and plan automatically extended by 1 month.');
+        }
+
         return back()->with('success', "User status updated to {$user->status}.");
+    }
+
+    public function updatePlan(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'search_limit' => 'required|integer|min:0',
+            'expiry_date' => 'required|date|after_or_equal:' . now()->addMonth()->format('Y-m-d'),
+        ]);
+
+        \App\Models\UserPlan::updateOrCreate(
+            ['user_id' => $validated['user_id']],
+            [
+                'search_limit' => $validated['search_limit'],
+                'expiry_date' => $validated['expiry_date']
+            ]
+        );
+
+        return back()->with('success', 'User plan updated successfully.');
     }
 }

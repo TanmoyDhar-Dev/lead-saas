@@ -42,6 +42,11 @@ class User extends Authenticatable
         return $this->hasMany(Lead::class);
     }
 
+    public function userPlan()
+    {
+        return $this->hasOne(UserPlan::class);
+    }
+
     public function leadSearches()
     {
         return $this->hasMany(LeadSearch::class);

@@ -19,7 +19,7 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
+Route::middleware(['auth', 'verified', 'active_user', 'plan_active'])->group(function () {
     if (app()->environment('local')) {
         Route::get('/debug/leads-db-check', [LeadController::class, 'debugDbCheck'])->name('debug.leads-db-check');
         Route::get('/debug/lead-visibility', [LeadController::class, 'debugVisibility'])->name('debug.lead-visibility');
@@ -57,6 +57,14 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/account-suspended', function () {
+        $user = auth()->user();
+        if ($user->role === 'admin' || !($user->userPlan && $user->userPlan->expiry_date && now()->greaterThan($user->userPlan->expiry_date))) {
+            return redirect()->route('dashboard');
+        }
+        return view('errors.suspended');
+    })->name('account.suspended');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -76,6 +84,7 @@ Route::middleware(['auth', 'active_user', 'admin'])->prefix('admin')->name('admi
     Route::put('/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
     Route::post('/users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
+    Route::post('/users/plan', [AdminUserController::class, 'updatePlan'])->name('users.update-plan');
 });
 
 require __DIR__.'/auth.php';
