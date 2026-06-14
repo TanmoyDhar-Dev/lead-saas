@@ -84,19 +84,51 @@
             </div>
 
             <!-- Access Expiry -->
+            @php
+                $user = auth()->user();
+                $hasExpiry = $user->role !== 'admin' && optional($user->userPlan)->expiry_date;
+                $expiryDateStr = $hasExpiry ? $user->userPlan->expiry_date->format('M d, Y') : 'Lifetime';
+                
+                if ($hasExpiry) {
+                    $days = (int) now()->startOfDay()->diffInDays($user->userPlan->expiry_date, false);
+                    $isPast = $days < 0;
+                    
+                    if ($isPast) {
+                        $statusText = 'EXPIRED';
+                        $statusSubtext = 'Please renew plan.';
+                        $progressColor = 'bg-red-500';
+                        $progressWidth = '100%';
+                    } elseif ($days === 0) {
+                        $statusText = 'EXPIRES TODAY';
+                        $statusSubtext = 'Critical: Renew today.';
+                        $progressColor = 'bg-amber-500';
+                        $progressWidth = '95%';
+                    } else {
+                        $statusText = $days . ' ' . Str::plural('DAY', $days) . ' LEFT';
+                        $statusSubtext = 'Active Plan.';
+                        $progressColor = $days < 7 ? 'bg-amber-500' : 'bg-brand-blue';
+                        $progressWidth = min(100, max(5, ($days / 30) * 100)) . '%'; // Visual approx
+                    }
+                } else {
+                    $statusText = 'NO EXPIRY';
+                    $statusSubtext = 'Status OK.';
+                    $progressColor = 'bg-brand-blue';
+                    $progressWidth = '100%';
+                }
+            @endphp
             <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
                 <div class="flex justify-between items-start mb-6">
                     <p class="text-slate-500 font-bold uppercase tracking-wider text-xs">Access Expiry</p>
-                    <span class="text-slate-800 font-bold text-sm">Lifetime</span>
+                    <span class="text-slate-800 font-bold text-sm">{{ $expiryDateStr }}</span>
                 </div>
                 <div class="flex items-center space-x-4 mb-4">
                     <div class="bg-slate-50 px-4 py-2 rounded-xl text-slate-800 font-bold text-sm border border-slate-100">
-                        NO EXPIRY
+                        {{ $statusText }}
                     </div>
-                    <span class="text-slate-400 text-sm italic">Status OK.</span>
+                    <span class="text-slate-400 text-sm italic">{{ $statusSubtext }}</span>
                 </div>
                 <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                    <div class="bg-brand-blue h-full w-full"></div>
+                    <div class="{{ $progressColor }} h-full transition-all" style="width: {{ $progressWidth }}"></div>
                 </div>
             </div>
 
