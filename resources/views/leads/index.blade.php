@@ -16,19 +16,44 @@
 
     <div class="space-y-6" x-data="leadManager()">
 
+        @php
+            $user = auth()->user();
+            $plan = $user->userPlan;
+            $limitReached = $user->role !== 'admin' && $plan && $plan->search_limit > 0 && $plan->searches_used >= $plan->search_limit;
+        @endphp
+
         {{-- ===== RUN HUNTER PANEL ===== --}}
+        
+        {{-- Session Flash Messages --}}
+        @if(session('success'))
+            <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start">
+                <svg class="w-5 h-5 text-emerald-500 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                <p class="text-sm text-emerald-800 font-bold">{{ session('success') }}</p>
+            </div>
+        @endif
+        @if(session('error') || $errors->any())
+            <div class="bg-red-50 border border-red-200 p-4 rounded-2xl flex items-start">
+                <svg class="w-5 h-5 text-red-500 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <div>
+                    <p class="text-sm text-red-800 font-bold">{{ session('error') ?? 'Please fix the errors below.' }}</p>
+                    @if($errors->any())
+                        <ul class="text-xs text-red-700 mt-1 list-disc list-inside">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+            </div>
+        @endif
+
         <div class="bg-navy-900 rounded-3xl p-3 shadow-xl" x-data="{ expanded: false, volume: 10, volumeInvalid: false }">
             <form action="{{ route('lead-searches.store') }}" method="POST">
                 @csrf
 
-                {{-- Main row: Country, City, Volume, Expand, Run --}}
                 <div class="flex flex-col md:flex-row items-stretch md:items-start space-y-2 md:space-y-0 md:space-x-2">
                     <div class="flex-1">
-                        <input type="text" name="country" placeholder="Country (e.g. United States)" required
-                               class="w-full bg-navy-800 border-none rounded-2xl text-white placeholder-slate-500 focus:ring-2 focus:ring-brand-blue py-4 px-5 text-sm">
-                    </div>
-                    <div class="flex-1">
-                        <input type="text" name="city" placeholder="City (e.g. San Francisco)" required
+                        <input type="text" name="target_location" placeholder="Target Location (e.g. San Francisco, US)" required
                                class="w-full bg-navy-800 border-none rounded-2xl text-white placeholder-slate-500 focus:ring-2 focus:ring-brand-blue py-4 px-5 text-sm">
                     </div>
 
@@ -57,16 +82,25 @@
                         <svg class="w-5 h-5 transition-transform" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
 
-                    {{-- Run Hunter button — disabled reactively when volume is invalid --}}
-                    <button type="submit"
-                            :disabled="volumeInvalid"
-                            :class="volumeInvalid
-                                ? 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-60'
-                                : 'bg-brand-blue hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20 active:scale-95'"
-                            class="font-bold py-4 px-8 rounded-2xl transition-all transform flex items-center justify-center whitespace-nowrap shrink-0">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                        RUN HUNTER
-                    </button>
+                    {{-- Run Hunter button — disabled reactively when volume is invalid or limit reached --}}
+                    @if($limitReached)
+                        <button type="button" disabled
+                                class="bg-red-500 text-white cursor-not-allowed font-bold py-4 px-8 rounded-2xl flex items-center justify-center whitespace-nowrap shrink-0 opacity-80"
+                                title="Search limit reached">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            LIMIT REACHED
+                        </button>
+                    @else
+                        <button type="submit"
+                                :disabled="volumeInvalid"
+                                :class="volumeInvalid
+                                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-60'
+                                    : 'bg-brand-blue hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20 active:scale-95'"
+                                class="font-bold py-4 px-8 rounded-2xl transition-all transform flex items-center justify-center whitespace-nowrap shrink-0">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            RUN HUNTER
+                        </button>
+                    @endif
                 </div>
 
                 {{-- Expanded optional filters --}}

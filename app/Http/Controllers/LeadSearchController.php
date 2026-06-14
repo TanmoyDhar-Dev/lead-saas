@@ -85,8 +85,14 @@ class LeadSearchController extends Controller
         $targetUserId = auth()->id();
         $user = auth()->user();
 
-        if ($user->userPlan && ($user->userPlan->searches_used >= $user->userPlan->search_limit || now()->gt($user->userPlan->expiry_date))) {
-            abort(403, 'Plan limits reached or expired.');
+        if ($user->role !== 'admin' && $user->userPlan) {
+            $plan = $user->userPlan;
+            $isLimitReached = $plan->search_limit > 0 && $plan->searches_used >= $plan->search_limit;
+            $isExpired = $plan->expiry_date && now()->gt($plan->expiry_date);
+
+            if ($isLimitReached || $isExpired) {
+                abort(403, 'Plan limits reached or expired.');
+            }
         }
 
         $leadSearch = LeadSearch::create([
@@ -106,12 +112,21 @@ class LeadSearchController extends Controller
         $response = $n8nService->searchLeads($validated);
 
         if ($response['successful']) {
+            if ($user->role !== 'admin' && $user->userPlan) {
+                $user->userPlan->increment('searches_used');
+            }
+
             // DO NOT update status to completed here. n8n will do that later.
-            return response()->json([
-                'success' => true,
-                'message' => 'Lead Hunter has started in the background. Leads will appear shortly.',
-                'redirect' => route('lead-searches.index')
-            ]);
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Lead Hunter has started in the background. Leads will appear shortly.',
+                    'redirect' => route('lead-searches.index')
+                ]);
+            }
+            
+            return redirect()->route('lead-searches.index')->with('success', 'Lead Hunter has started in the background. Leads will appear shortly.');
+            
         } else {
             $leadSearch->update([
                 'status' => 'failed',
@@ -119,10 +134,14 @@ class LeadSearchController extends Controller
                 'error_message' => $response['error'] ?? 'Failed to reach extraction server.',
             ]);
 
-            return response()->json([
-                'success' => false,
-                'error' => "Lead search failed: " . ($response['error'] ?? 'Unknown error')
-            ], 422);
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => "Lead search failed: " . ($response['error'] ?? 'Unknown error')
+                ], 422);
+            }
+            
+            return back()->with('error', "Lead search failed: " . ($response['error'] ?? 'Unknown error'));
         }
     }
 
