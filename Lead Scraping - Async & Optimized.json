@@ -13,7 +13,7 @@
       "typeVersion": 1.5,
       "position": [
         -880,
-        752
+        736
       ],
       "id": "230fd936-d9a8-4c39-af51-e0d9c59c90ff",
       "name": "Respond to Webhook (Async)"
@@ -34,8 +34,8 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "user_id": "={{ $('Lead Searches (Set Processing)').item.json.user_id }}",
-            "lead_search_id": "={{ $('Lead Searches (Set Processing)').item.json.id }}",
+            "user_id": "={{ $('Respond to Webhook (Async)').item.json.body.user_id }}",
+            "lead_search_id": "={{ $('Respond to Webhook (Async)').item.json.body.lead_search_id }}",
             "full_name": "={{ $json.full_name }}",
             "job_title": "={{ $json.job_title }}",
             "linkedin_url": "={{ $json.linkedin }}",
@@ -308,7 +308,7 @@
               "display": true,
               "type": "dateTime",
               "canBeUsedToMatch": false,
-              "removed": true
+              "removed": false
             },
             {
               "id": "updated_at",
@@ -318,7 +318,7 @@
               "display": true,
               "type": "dateTime",
               "canBeUsedToMatch": false,
-              "removed": true
+              "removed": false
             }
           ],
           "attemptToConvertTypes": false,
@@ -329,8 +329,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -432,
-        656
+        16,
+        640
       ],
       "id": "241d1d28-ecf8-4067-9b50-70f057d46444",
       "name": "Leads (Upsert Data)",
@@ -352,7 +352,7 @@
       "typeVersion": 2.1,
       "position": [
         -1104,
-        752
+        736
       ],
       "id": "171cf766-bb5f-4e4f-bcc4-b67f624a554f",
       "name": "Webhook",
@@ -367,24 +367,24 @@
           "value": "IoSHqwTR9YGhzccez",
           "mode": "list"
         },
-        "customBody": "={\n    \"company_keywords\": [\n        \"{{ $json.industry }}\"\n    ],\n    \"contact_job_title\": [\n        \"{{ $json.position }}\"\n    ],\n    \"contact_location\": [\n        \"{{ $json.target_location }}\"\n    ],\n    \"email_status\": [\n        \"validated\"\n    ],\n    \"fetch_count\": {{ $json.volume }}\n}",
-        "timeout": {}
+        "customBody": "={\n    \"company_keywords\": [\n        \"{{ $json.body.industry }}\"\n    ],\n    \"contact_job_title\": [\n        \"{{ $json.body.position }}\"\n    ],\n    \"contact_location\": [\n        \"{{ $json.body.location }}\"\n    ],\n    \"email_status\": [\n        \"validated\"\n    ],\n    \"fetch_count\": {{ $json.body.volume }}\n}"
       },
       "type": "@apify/n8n-nodes-apify.apify",
       "typeVersion": 1,
       "position": [
         -656,
-        752
+        736
       ],
       "id": "d3c6bad1-6a67-41a5-8220-e75b955853b3",
       "name": "Lead Finder",
+      "alwaysOutputData": true,
       "credentials": {
         "apifyApi": {
           "id": "Zla1tpMSPa2UbIDC",
           "name": "Apify (eGeneration)"
         }
       },
-      "onError": "continueErrorOutput"
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -543,8 +543,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -208,
-        656
+        240,
+        640
       ],
       "id": "8a9d4514-d1c4-4405-b38a-fdea75f622d8",
       "name": "Lead Searches (Set Completed)",
@@ -554,6 +554,52 @@
           "name": "Postgres-mahrab"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n    \n    // SCENARIO 1: Apify had a Hard Error (e.g., API Rate Limit, Timeout)\n    // When \"Continue (Regular Output)\" is used, n8n injects an \"error\" object.\n    if (item.json.error) {\n        return {\n            json: {\n                decision: \"actor_error\",\n                status: \"failed\",\n                error: item.json.error || \"Unknown Apify API Error\"\n            }\n        };\n    }\n\n    // SCENARIO 2: Apify Succeeded, but found 0 leads (Always Output Data injected an empty object)\n    if (Object.keys(item.json).length === 0) {\n        return {\n            json: {\n                decision: \"no_data_found\",\n                status: \"failed\",\n                error: \"Apify executed successfully but returned 0 leads for the provided keywords.\"\n            }\n        };\n    } \n    \n    // SCENARIO 3: Apify Succeeded and found leads!\n    return {\n        json: {\n            decision: \"data_found\",\n            status: \"success\",\n            ...item.json // Keeps all the original Apify data intact\n        }\n    };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        736
+      ],
+      "id": "956ff644-8d72-489c-905a-36a42adbc41d",
+      "name": "Validate Apify Output"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7a85ed5b-2af7-472a-a44c-77437e97e2ba",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "=success",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -208,
+        736
+      ],
+      "id": "8c50933b-8cfc-4d25-83c1-6c052000c05e",
+      "name": "Has Valid Data?"
     },
     {
       "parameters": {
@@ -713,10 +759,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -432,
-        848
+        16,
+        832
       ],
-      "id": "1ed3bce0-5105-4482-877c-4dcc24e8ac2f",
+      "id": "9e82f8eb-1710-4403-af38-4afde30c23b2",
       "name": "Lead Searches (Set Error)",
       "credentials": {
         "postgres": {
@@ -734,254 +780,27 @@
             "host": "n8n.egeneration.co",
             "x-forwarded-scheme": "https",
             "x-forwarded-proto": "https",
-            "x-forwarded-for": "10.10.0.219",
-            "x-real-ip": "10.10.0.219",
-            "content-length": "148",
+            "x-forwarded-for": "10.10.0.216",
+            "x-real-ip": "10.10.0.216",
+            "content-length": "185",
             "user-agent": "GuzzleHttp/7",
             "content-type": "application/json"
           },
           "params": {},
           "query": {},
           "body": {
-            "location": "united states",
-            "industry": "software",
-            "position": "ceo",
+            "location": "state of são paulo, brazil",
+            "industry": "educational institution",
+            "position": "founder",
             "volume": "2",
-            "user_id": 1,
-            "lead_search_id": "019e58e0-15bf-7069-a62f-77a6dee0e357"
+            "user_id": 2,
+            "lead_search_id": "019ec56d-5768-739b-bc9b-0964d4ed4835"
           },
-          "webhookUrl": "https://n8n.egeneration.co/webhook-test/api/lead-finder",
-          "executionMode": "test"
+          "webhookUrl": "https://n8n.egeneration.co/webhook/api/lead-finder",
+          "executionMode": "production"
         },
         "pairedItem": {
           "item": 0
-        }
-      }
-    ],
-    "Respond to Webhook (Async)": [
-      {
-        "json": {
-          "headers": {
-            "host": "n8n.egeneration.co",
-            "x-forwarded-scheme": "https",
-            "x-forwarded-proto": "https",
-            "x-forwarded-for": "10.10.0.219",
-            "x-real-ip": "10.10.0.219",
-            "content-length": "148",
-            "user-agent": "GuzzleHttp/7",
-            "content-type": "application/json"
-          },
-          "params": {},
-          "query": {},
-          "body": {
-            "location": "united states",
-            "industry": "software",
-            "position": "ceo",
-            "volume": "2",
-            "user_id": 1,
-            "lead_search_id": "019e58e0-15bf-7069-a62f-77a6dee0e357"
-          },
-          "webhookUrl": "https://n8n.egeneration.co/webhook-test/api/lead-finder",
-          "executionMode": "test"
-        },
-        "pairedItem": {
-          "item": 0
-        }
-      }
-    ],
-    "Lead Finder": [
-      {
-        "json": {
-          "first_name": "Dov",
-          "last_name": "Koplovsky",
-          "email": "dov.koplovsky@newcomglobal.com",
-          "personal_email": "dkoplovsky@aol.com",
-          "mobile_number": "+16178281216",
-          "full_name": "Dov Koplovsky",
-          "job_title": "Owner/CEO",
-          "linkedin": "https://www.linkedin.com/in/dov-koplovsky-6424642",
-          "company_name": "Newcom",
-          "company_website": "https://www.newcomglobal.com",
-          "industry": "Information Technology & Services",
-          "company_size": 91,
-          "headline": "Owner/CEO @ Newcom | Business Growth, Strategic Leadership",
-          "seniority_level": "owner",
-          "functional_level": "c_suite",
-          "city": "Boston",
-          "state": "Massachusetts",
-          "country": "United States",
-          "company_linkedin": "https://www.linkedin.com/company/newcomglobal",
-          "company_linkedin_uid": "24767026",
-          "company_founded_year": "1997",
-          "company_domain": "newcomglobal.com",
-          "company_phone": "+1 781-826-7989",
-          "company_street_address": "575 Washington St",
-          "company_full_address": "575 Washington Street, Pembroke, MA 02359, US",
-          "company_state": "Massachusetts",
-          "company_city": "Pembroke",
-          "company_country": "United States",
-          "company_postal_code": "02359",
-          "keywords": "avl, gps, traffic management systems, wireless communications, data center, infrastructure, tablets, laptops, mobile printers, mobile installation, system design, project management, it services & it consulting, wireless solutions, systems integration, mobility, it management, cybersecurity, digital infrastructure, sensor technology, security assessments, it services, cloud solutions, enterprise solutions, data security, network security, mobile connectivity, public safety, real-time monitoring, asset management, endpoint protection, vulnerability assessment, technology implementation, remote monitoring, environmental data, iot security, data encryption, advanced technology, implementation services, safety solutions, hardware & software, network segmentation, disaster recovery, risk compliance, critical infrastructure, managed services, real-time data, digital transformation, comprehensive technology, security solutions, network infrastructure, custom applications, technology assessments, client-centric solutions, business optimization, advanced analytics, emerging technologies, internet service providers, information technology & services, mobile devices, mobile, internet, productivity, cloud computing, enterprise software, enterprises, computer software, b2b, computer & network security",
-          "company_description": "NEWCOM is based in the metropolitan Boston area with operations nationwide. Our expert project team offers turnkey solutions for commercial and public sector markets ranging from system analysis, design, installation, implementation, and system management.\n\nLeading the industry with a collaborative approach to systems integration, NEWCOM provides the critical link between wireless technology and business optimization providing customized, best-in-class wireless solutions that are designed to maximize our clients technology investment in the face of the on-going technological change.",
-          "company_annual_revenue": null,
-          "company_annual_revenue_clean": null,
-          "company_total_funding": null,
-          "company_total_funding_clean": null,
-          "company_technologies": "facebook custom audiences, facebook login (connect), facebook widget, flywheel, google analytics, google font api, google tag manager, hotjar, intercom, microsoft office 365, mobile friendly, outlook, pardot, remote, salesforce, wordpress.org, youtube"
-        },
-        "pairedItem": {
-          "item": 0
-        }
-      },
-      {
-        "json": {
-          "first_name": "Jonathan",
-          "last_name": "Nielsen",
-          "email": "jonathan@bigcartel.com",
-          "personal_email": null,
-          "mobile_number": null,
-          "full_name": "Jonathan Nielsen",
-          "job_title": "Co-CEO | Owner",
-          "linkedin": "https://www.linkedin.com/in/jonathan-nielsen-3060541",
-          "company_name": "Big Cartel",
-          "company_website": "https://www.bigcartel.com",
-          "industry": "Information Technology & Services",
-          "company_size": 99,
-          "headline": "CEO | Investor | Board Member",
-          "seniority_level": "owner",
-          "functional_level": "c_suite",
-          "city": "Park City",
-          "state": "Utah",
-          "country": "United States",
-          "company_linkedin": "https://www.linkedin.com/company/big-cartel",
-          "company_linkedin_uid": "2184625",
-          "company_founded_year": "2005",
-          "company_domain": "bigcartel.com",
-          "company_phone": "+1 385-355-4333",
-          "company_street_address": "201 S Main St",
-          "company_full_address": "201 South Main Street, Suite 1100, Salt Lake City, Utah, USA, 84111",
-          "company_state": "Utah",
-          "company_city": "Salt Lake City",
-          "company_country": "United States",
-          "company_postal_code": "84111-1475",
-          "keywords": "digital media, fashion, design, art, consumer internet, internet, information technology, software development, e-commerce, online store, free templates, artist support, small business, customizable design, real-time sales, payment processing, inventory management, customer support, seo optimization, marketing tools, mobile app, affiliate integrations, social media sales, user-friendly, independent seller, premium plans, product variants, shipping solution, sales dashboard, on-demand printing, website analytics, community support, sales tax calculation, platform migration, secure checkout, online sales, industry insights, shop customization, creative entrepreneurship, artistic goods, merchandising tools, multi-platform integration, order fulfillment, customer engagement, user experience, payment gateways, e-commerce solutions, business plans, brand building, storefront design, product listings, marketplace comparison, growth strategies, business scaling, digital marketing, customer feedbacks, template customization, store management, consumers, information technology & services, ux, business planning, b2b, marketing & advertising",
-          "company_description": "We create simple tools and resources for artists to build unique online stores and run creative businesses. We believe in the artist. We also believe in building a company that cares about and supports it's people both in and out of work.",
-          "company_annual_revenue": "11000000",
-          "company_annual_revenue_clean": "11M",
-          "company_total_funding": null,
-          "company_total_funding_clean": null,
-          "company_technologies": "adobe media optimizer, amadesa, bigcartel, bootstrap framework, canvas by instructure, cedexis radar, cloudflare hosting, cloudflare dns, disqus, doubleclick, doubleclick conversion, dropbox, facebook custom audiences, facebook like button, facebook login (connect), facebook widget, gmail, google adsense, google adwords conversion, google analytics, google apps, google dynamic remarketing, google font api, google play, google tag manager, google translate api, google translate widget, hubspot, intercom, jquery 1.11.1, livechat, lucky orange, mailchimp, mailchimp spf, mcafee, microsoft office 365, mobile friendly, multilingual, new relic, ooyala, paypal, postmark, prototypejs, ruby on rails, shutterstock, stripe, taboola, vimeo, visual website optimizer, wordpress.org, wufoo, youtube, recaptcha"
-        },
-        "pairedItem": {
-          "item": 0
-        }
-      }
-    ],
-    "Leads (Upsert Data)": [
-      {
-        "json": {
-          "id": "aa46e71f-f546-4d0a-b51e-ef60d996c1d6",
-          "user_id": "1",
-          "lead_search_id": "019e58e0-15bf-7069-a62f-77a6dee0e357",
-          "full_name": "Dov Koplovsky",
-          "job_title": "Owner/CEO",
-          "position": "owner",
-          "address": "Boston,Massachusetts,United States",
-          "bio": "Owner/CEO @ Newcom | Business Growth, Strategic Leadership",
-          "linkedin_url": "https://www.linkedin.com/in/dov-koplovsky-6424642",
-          "personal_email": "dkoplovsky@aol.com",
-          "company_email": "dov.koplovsky@newcomglobal.com",
-          "industry": "Information Technology & Services",
-          "company_name": "Newcom",
-          "company_website": "https://www.newcomglobal.com",
-          "company_linkedin": "https://www.linkedin.com/company/newcomglobal",
-          "company_city": "Pembroke",
-          "company_country": "United States",
-          "company_address": "575 Washington Street, Pembroke, MA 02359, US",
-          "company_state": "Massachusetts",
-          "company_domain": "newcomglobal.com",
-          "company_description": "NEWCOM is based in the metropolitan Boston area with operations nationwide. Our expert project team offers turnkey solutions for commercial and public sector markets ranging from system analysis, design, installation, implementation, and system management.\n\nLeading the industry with a collaborative approach to systems integration, NEWCOM provides the critical link between wireless technology and business optimization providing customized, best-in-class wireless solutions that are designed to maximize our clients technology investment in the face of the on-going technological change.",
-          "company_annual_revenue": null,
-          "company_total_funding": null,
-          "company_technology": "facebook custom audiences, facebook login (connect), facebook widget, flywheel, google analytics, google font api, google tag manager, hotjar, intercom, microsoft office 365, mobile friendly, outlook, pardot, remote, salesforce, wordpress.org, youtube",
-          "created_at": null,
-          "updated_at": null
-        },
-        "pairedItem": {
-          "item": 0
-        }
-      },
-      {
-        "json": {
-          "id": "ea88b1df-a8f6-49be-9ac7-5e7e3232a741",
-          "user_id": "1",
-          "lead_search_id": "019e58e0-15bf-7069-a62f-77a6dee0e357",
-          "full_name": "Jonathan Nielsen",
-          "job_title": "Co-CEO | Owner",
-          "position": "owner",
-          "address": "Park City,Utah,United States",
-          "bio": "CEO | Investor | Board Member",
-          "linkedin_url": "https://www.linkedin.com/in/jonathan-nielsen-3060541",
-          "personal_email": null,
-          "company_email": "jonathan@bigcartel.com",
-          "industry": "Information Technology & Services",
-          "company_name": "Big Cartel",
-          "company_website": "https://www.bigcartel.com",
-          "company_linkedin": "https://www.linkedin.com/company/big-cartel",
-          "company_city": "Salt Lake City",
-          "company_country": "United States",
-          "company_address": "201 South Main Street, Suite 1100, Salt Lake City, Utah, USA, 84111",
-          "company_state": "Utah",
-          "company_domain": "bigcartel.com",
-          "company_description": "We create simple tools and resources for artists to build unique online stores and run creative businesses. We believe in the artist. We also believe in building a company that cares about and supports it's people both in and out of work.",
-          "company_annual_revenue": "11000000",
-          "company_total_funding": null,
-          "company_technology": "adobe media optimizer, amadesa, bigcartel, bootstrap framework, canvas by instructure, cedexis radar, cloudflare hosting, cloudflare dns, disqus, doubleclick, doubleclick conversion, dropbox, facebook custom audiences, facebook like button, facebook login (connect), facebook widget, gmail, google adsense, google adwords conversion, google analytics, google apps, google dynamic remarketing, google font api, google play, google tag manager, google translate api, google translate widget, hubspot, intercom, jquery 1.11.1, livechat, lucky orange, mailchimp, mailchimp spf, mcafee, microsoft office 365, mobile friendly, multilingual, new relic, ooyala, paypal, postmark, prototypejs, ruby on rails, shutterstock, stripe, taboola, vimeo, visual website optimizer, wordpress.org, wufoo, youtube, recaptcha",
-          "created_at": null,
-          "updated_at": null
-        },
-        "pairedItem": {
-          "item": 1
-        }
-      }
-    ],
-    "Lead Searches (Set Completed)": [
-      {
-        "json": {
-          "id": "019e58e0-15bf-7069-a62f-77a6dee0e357",
-          "user_id": "1",
-          "target_location": "united states",
-          "industry": "software",
-          "position": "ceo",
-          "volume": 2,
-          "status": "Completed",
-          "error_message": null,
-          "started_at": "2026-06-01T16:23:12.000Z",
-          "completed_at": "2026-06-01T16:23:26.000Z",
-          "created_at": null,
-          "updated_at": null
-        },
-        "pairedItem": {
-          "item": 0
-        }
-      },
-      {
-        "json": {
-          "id": "019e58e0-15bf-7069-a62f-77a6dee0e357",
-          "user_id": "1",
-          "target_location": "united states",
-          "industry": "software",
-          "position": "ceo",
-          "volume": 2,
-          "status": "Completed",
-          "error_message": null,
-          "started_at": "2026-06-01T16:23:12.000Z",
-          "completed_at": "2026-06-01T16:23:26.000Z",
-          "created_at": null,
-          "updated_at": null
-        },
-        "pairedItem": {
-          "item": 1
         }
       }
     ]
@@ -1006,7 +825,8 @@
             "type": "main",
             "index": 0
           }
-        ]
+        ],
+        []
       ]
     },
     "Webhook": {
@@ -1024,6 +844,34 @@
       "main": [
         [
           {
+            "node": "Validate Apify Output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Lead Searches (Set Completed)": {
+      "main": [
+        []
+      ]
+    },
+    "Validate Apify Output": {
+      "main": [
+        [
+          {
+            "node": "Has Valid Data?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Valid Data?": {
+      "main": [
+        [
+          {
             "node": "Leads (Upsert Data)",
             "type": "main",
             "index": 0
@@ -1037,27 +885,17 @@
           }
         ]
       ]
-    },
-    "Lead Searches (Set Completed)": {
-      "main": [
-        []
-      ]
-    },
-    "Lead Searches (Set Error)": {
-      "main": [
-        []
-      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1",
-    "availableInMCP": false,
+    "availableInMCP": true,
     "timeSavedMode": "fixed",
     "timezone": "Asia/Dhaka",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "54d0b630-6a40-4ee3-b734-570030c8b661",
+  "versionId": "bffc30cc-4812-4e16-add7-a9ef155457d4",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "3a8e012802f256258478d64da1b16909abecf4f288a904a823a76f9e7910b8b4"

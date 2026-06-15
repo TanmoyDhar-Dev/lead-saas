@@ -15,7 +15,7 @@
 >
     <div class="flex flex-col h-full">
         {{-- Logo --}}
-        <div class="flex items-center h-[65px] border-b border-navy-800 bg-navy-950 transition-all duration-300"
+        <div class="flex items-center h-[77px] border-b border-navy-800 bg-navy-950 transition-all duration-300"
              :class="sidebarCollapsed ? 'justify-center px-0' : 'px-5'">
             <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 min-w-0">
                 <div class="w-9 h-9 bg-brand-blue rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
