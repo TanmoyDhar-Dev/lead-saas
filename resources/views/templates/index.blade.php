@@ -21,7 +21,7 @@
 
     <div class="space-y-8 max-w-7xl mx-auto pb-10" x-data="{ showViewModal: false, viewData: {}, isAdmin: {{ auth()->user()->isAdmin() ? 'true' : 'false' }}, openModal(template) { this.viewData = template; this.showViewModal = true; } }">
 
-        @if(session('success'))
+        {{-- @if(session('success'))
             <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start">
                 <svg class="w-5 h-5 text-emerald-500 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                 <div class="flex-1">
@@ -29,7 +29,7 @@
                     <p class="text-emerald-600 text-xs mt-1">{{ session('success') }}</p>
                 </div>
             </div>
-        @endif
+        @endif --}}
 
         @if($systemSample)
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex justify-between items-center mb-6">
