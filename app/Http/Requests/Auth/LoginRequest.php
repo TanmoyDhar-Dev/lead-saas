@@ -50,6 +50,27 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        $user = Auth::user();
+
+        // Check if account is explicitly inactive or suspended
+        if (in_array($user->status, ['inactive', 'suspended'], true)) {
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'email' => 'Your account has been suspended or is inactive. Please contact the administrator.',
+            ]);
+        }
+
+        // Check if plan has expired (Auto suspension)
+        if ($user->role !== 'admin' && optional($user->userPlan)->expiry_date) {
+            $days = (int) now()->startOfDay()->diffInDays($user->userPlan->expiry_date, false);
+            if ($days < 0) {
+                Auth::logout();
+                throw ValidationException::withMessages([
+                    'email' => 'Your account plan has expired. Please contact the administrator to renew.',
+                ]);
+            }
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 
