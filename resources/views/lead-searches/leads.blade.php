@@ -137,20 +137,22 @@
                             <div>
                                 <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Delivery Mode *</label>
                                 <div class="grid grid-cols-2 gap-3">
+                                    {{-- Save as Draft --}}
                                     <label class="cursor-pointer">
-                                        <input type="radio" name="delivery_mode" value="Send Immediately" class="peer sr-only" required checked>
-                                        <div class="p-3 bg-white border border-slate-200 rounded-xl peer-checked:border-brand-blue peer-checked:bg-blue-50 transition-all flex flex-col items-center justify-center text-center">
-                                            <svg class="w-5 h-5 text-slate-400 peer-checked:text-brand-blue mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                                            <span class="text-xs font-bold text-slate-700 peer-checked:text-brand-blue">Send Immediately</span>
-                                        </div>
-                                    </label>
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="delivery_mode" value="Save as Draft" class="peer sr-only">
+                                        <input type="radio" name="delivery_mode" value="Save as Draft" class="peer sr-only" required checked>
                                         <div class="p-3 bg-white border border-slate-200 rounded-xl peer-checked:border-brand-blue peer-checked:bg-blue-50 transition-all flex flex-col items-center justify-center text-center">
                                             <svg class="w-5 h-5 text-slate-400 peer-checked:text-brand-blue mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
                                             <span class="text-xs font-bold text-slate-700 peer-checked:text-brand-blue">Save as Draft</span>
                                         </div>
                                     </label>
+                                    {{-- Sent Immediately --}}
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="delivery_mode" value="Send Immediately" class="peer sr-only">
+                                        <div class="p-3 bg-white border border-slate-200 rounded-xl peer-checked:border-brand-blue peer-checked:bg-blue-50 transition-all flex flex-col items-center justify-center text-center">
+                                            <svg class="w-5 h-5 text-slate-400 peer-checked:text-brand-blue mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                                            <span class="text-xs font-bold text-slate-700 peer-checked:text-brand-blue">Send Immediately</span>
+                                        </div>
+                                    </label>                                  
                                 </div>
                             </div>
 
