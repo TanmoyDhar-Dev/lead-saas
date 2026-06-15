@@ -10,5 +10,6 @@ class EmailTemplate extends Model
 
     protected $casts = [
         'is_default' => 'boolean',
+        'is_system_sample' => 'boolean',
     ];
 }

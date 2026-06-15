@@ -215,6 +215,40 @@
                 </div>
             </div>
         </div>
+        {{-- Email Preview Modal --}}
+        <div x-show="showEmailPreviewModal" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+            <div class="w-full max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden relative" @click.away="showEmailPreviewModal = false">
+                {{-- Header --}}
+                <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg">Email Preview</h3>
+                        <p class="text-sm text-slate-500 mt-1" x-text="previewSubject || 'No Subject'"></p>
+                    </div>
+                    <button @click="showEmailPreviewModal = false" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-200 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                
+                {{-- Body --}}
+                <div class="p-6 overflow-y-auto max-h-[70vh] custom-scrollbar bg-slate-50">
+                    {{-- Hyper-Personalized Callout --}}
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r shadow-sm">
+                        <h4 class="text-xs font-bold text-blue-800 uppercase tracking-widest mb-2">AI Hyper-Personalized Icebreaker</h4>
+                        <p class="text-sm text-blue-900 italic leading-relaxed" x-text="previewHyperLine || 'No personalization generated.'"></p>
+                    </div>
+
+                    {{-- HTML Email Body --}}
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <div x-html="previewBody || 'No email drafted yet.'" class="prose max-w-none text-gray-800 text-sm"></div>
+                    </div>
+                </div>
+
+                {{-- Footer --}}
+                <div class="p-4 border-t border-slate-200 bg-white flex justify-end shrink-0">
+                    <button type="button" @click="showEmailPreviewModal = false" class="px-6 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-all">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     @push('scripts')
@@ -246,7 +280,16 @@
                     sender_company: '',
                     sender_address: ''
                 },
-                files: [],
+                showEmailPreviewModal: false,
+                previewSubject: '',
+                previewHyperLine: '',
+                previewBody: '',
+                openPreview(subject, hyperLine, body) {
+                    this.previewSubject = subject;
+                    this.previewHyperLine = hyperLine;
+                    this.previewBody = body;
+                    this.showEmailPreviewModal = true;
+                },
                 
                 outreachPollInterval: null,
 

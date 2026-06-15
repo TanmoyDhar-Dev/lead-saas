@@ -47,7 +47,10 @@ Route::middleware(['auth', 'verified', 'active_user', 'plan_active'])->group(fun
     Route::delete('/lead-searches/{leadSearch}', [LeadSearchController::class, 'destroy'])->name('lead-searches.destroy');
 
     Route::get('/templates', [\App\Http\Controllers\TemplateController::class, 'index'])->name('templates.index');
+    Route::get('/templates/create', [\App\Http\Controllers\TemplateController::class, 'create'])->name('templates.create');
     Route::post('/templates', [\App\Http\Controllers\TemplateController::class, 'store'])->name('templates.store');
+    Route::get('/templates/{id}/edit', [\App\Http\Controllers\TemplateController::class, 'edit'])->name('templates.edit');
+    Route::put('/templates/{id}', [\App\Http\Controllers\TemplateController::class, 'update'])->name('templates.update');
     Route::post('/templates/{id}/default', [\App\Http\Controllers\TemplateController::class, 'setDefault'])->name('templates.default');
     Route::delete('/templates/{id}', [\App\Http\Controllers\TemplateController::class, 'destroy'])->name('templates.destroy');
 
