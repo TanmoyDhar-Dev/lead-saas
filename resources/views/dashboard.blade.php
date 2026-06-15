@@ -33,7 +33,7 @@
         <div>
             <div class="flex items-center justify-between mb-4">
                 <h3 class="font-bold text-slate-800">Email Outreach</h3>
-                <a href="{{ route('opened-emails.index') }}" class="text-brand-blue text-sm font-bold hover:underline">View opened emails</a>
+                {{-- <a href="{{ route('opened-emails.index') }}" class="text-brand-blue text-sm font-bold hover:underline">View opened emails</a> --}}
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
