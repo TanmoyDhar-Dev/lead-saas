@@ -291,7 +291,9 @@
                 previewSubject: '',
                 previewHyperLine: '',
                 previewBody: '',
-                openPreview(subject, hyperLine, body) {
+                previewLeadId: null,
+                openPreview(leadId, subject, hyperLine, body) {
+                    this.previewLeadId = leadId;
                     this.previewSubject = subject;
                     this.previewHyperLine = hyperLine;
                     this.previewBody = body;
@@ -360,25 +362,41 @@
                             return;
                         }
 
-                        this.fetchLeads(true);
+                        this.fetchLeads(this.filters.page, true);
                     }, 5000);
                 },
 
-                fetchLeads(isSilent = false) {
-                    if (!isSilent) {
+                fetchLeads(page = 1, isPolling = false) {
+                    if (!isPolling) {
                         this.loading = true;
                     }
-
-                    let params = new URLSearchParams(this.filters);
                     
-                    fetch("{{ route('lead-searches.leads', $leadSearch) }}?" + params.toString(), {
+                    const params = {
+                        page: page,
+                        q: this.filters.q
+                    };
+
+                    fetch(`/lead-searches/{{ $leadSearch->id }}/leads?${new URLSearchParams(params).toString()}`, {
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     })
-                    .then(r => r.text())
+                    .then(response => response.text())
                     .then(html => {
                         document.getElementById('leads-container').innerHTML = html;
+                        this.loading = false;
+                        
+                        if (this.showEmailPreviewModal && this.previewLeadId) {
+                            const btn = document.querySelector(`button[data-preview-lead-id="${this.previewLeadId}"]`);
+                            if (btn) {
+                                btn.click();
+                            }
+                        }
+
+                        if (this.modalOpen && this.modalLeadId) {
+                            this.openModal(this.modalLeadId);
+                        }
+
                         if (window.Alpine && typeof window.Alpine.initTree === 'function') {
                             window.Alpine.initTree(document.getElementById('leads-container'));
                         }

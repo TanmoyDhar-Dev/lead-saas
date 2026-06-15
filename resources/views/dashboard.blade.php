@@ -73,14 +73,25 @@
 
         <!-- Stats Cards Row -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Account Authority -->
+            <!-- Account Authority / Search Usage -->
             <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex flex-col items-center text-center">
-                <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                </div>
-                <p class="text-slate-500 font-bold uppercase tracking-wider text-xs mb-2">Account Authority</p>
-                <h4 class="text-2xl font-bold text-slate-800 mb-4">{{ auth()->user()->role === 'admin' ? 'Administrator' : 'Verified User' }}</h4>
-                <p class="text-slate-400 text-sm italic">{{ auth()->user()->role === 'admin' ? 'Unlimited access.' : 'Assigned access.' }}</p>
+                @if(auth()->user()->role === 'admin')
+                    <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    </div>
+                    <p class="text-slate-500 font-bold uppercase tracking-wider text-xs mb-2">Account Authority</p>
+                    <h4 class="text-2xl font-bold text-slate-800 mb-4">Administrator</h4>
+                    <p class="text-slate-400 text-sm italic">Unlimited access.</p>
+                @else
+                    <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <p class="text-slate-500 font-bold uppercase tracking-wider text-xs mb-2">Search Usage</p>
+                    <h4 class="text-2xl font-bold text-slate-800 mb-4">
+                        {{ auth()->user()->userPlan?->searches_used ?? 0 }} <span class="text-slate-300 mx-1">/</span> {{ auth()->user()->userPlan?->search_limit ?? 0 }}
+                    </h4>
+                    <p class="text-slate-400 text-sm italic">Searches utilized.</p>
+                @endif
             </div>
 
             <!-- Access Expiry -->
