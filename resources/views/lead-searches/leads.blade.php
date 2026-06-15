@@ -172,7 +172,7 @@
                             {{-- Subject --}}
                             <div>
                                 <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Email Subject *</label>
-                                <input type="text" name="subject" x-model="form.subject" required class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-3 px-4 transition-all" placeholder="e.g. Quick question regarding [Company]">
+                                <input type="text" name="subject" x-model="form.subject" autocomplete="off" required class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-3 px-4 transition-all" placeholder="e.g. Quick question regarding [Company]">
                             </div>
 
                             {{-- Body --}}
@@ -224,7 +224,6 @@
                 <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
                     <div>
                         <h3 class="font-bold text-slate-800 text-lg">Email Preview</h3>
-                        <p class="text-sm text-slate-500 mt-1" x-text="previewSubject || 'No Subject'"></p>
                     </div>
                     <button @click="showEmailPreviewModal = false" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-200 transition-all">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -237,6 +236,12 @@
                     <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r shadow-sm">
                         <h4 class="text-xs font-bold text-blue-800 uppercase tracking-widest mb-2">AI Hyper-Personalized Icebreaker</h4>
                         <p class="text-sm text-blue-900 italic leading-relaxed" x-text="previewHyperLine || 'No personalization generated.'"></p>
+                    </div>
+                    
+                    {{-- Subject Line --}}
+                    <div class="mb-6 flex items-start sm:items-center bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider w-24 shrink-0 mt-0.5 sm:mt-0">Subject:</span>
+                        <span class="text-slate-800 font-medium text-sm sm:text-base" x-text="previewSubject || 'No Subject'"></span>
                     </div>
 
                     {{-- HTML Email Body --}}
