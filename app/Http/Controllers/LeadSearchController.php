@@ -113,7 +113,10 @@ class LeadSearchController extends Controller
 
         if ($response['successful']) {
             if ($user->role !== 'admin' && $user->userPlan) {
-                $user->userPlan->increment('searches_used');
+                DB::transaction(function () use ($user, $leadSearch) {
+                    $user->userPlan->increment('searches_used');
+                    $leadSearch->update(['quota_charged' => DB::raw('true')]);
+                });
             }
 
             // DO NOT update status to completed here. n8n will do that later.

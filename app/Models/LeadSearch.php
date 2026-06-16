@@ -24,6 +24,8 @@ class LeadSearch extends Model
         'position',
         'volume',
         'status',
+        'quota_charged',
+        'quota_refunded_at',
         'started_at',
         'completed_at',
         'error_message',
@@ -31,8 +33,10 @@ class LeadSearch extends Model
 
     protected $casts = [
         'started_at' => 'datetime',
-        'completed_at'          => 'datetime',
-        'volume'                => 'integer',
+        'completed_at' => 'datetime',
+        'quota_charged' => 'boolean',
+        'quota_refunded_at' => 'datetime',
+        'volume' => 'integer',
     ];
 
     public function user()
