@@ -14,5 +14,5 @@
         Queued
     </span>
 @else
-    <span class="text-[10px] text-slate-300">—</span>
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-500">---</span>
 @endif
