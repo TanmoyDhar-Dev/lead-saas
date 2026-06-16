@@ -13,7 +13,7 @@
         $limitReached = $user->role !== 'admin' && $plan && $plan->search_limit > 0 && $plan->searches_used >= $plan->search_limit;
     @endphp
 
-    <div class="max-w-3xl mx-auto space-y-6" x-data="leadHunterForm()">
+    <div class="max-w-3xl mx-auto space-y-4" x-data="leadHunterForm()">
         {{-- Info Banner --}}
         @if($limitReached)
             <div class="bg-red-50 border border-red-200 p-5 rounded-2xl flex items-start">
@@ -63,15 +63,15 @@
                 <p class="text-xs text-slate-500 font-medium mt-2">Please wait, contacting n8n worker...</p>
             </div>
 
-            <div class="p-6 border-b border-slate-100">
+            <div class="px-6 py-4 border-b border-slate-100">
                 <h3 class="font-bold text-slate-800">Configure Hunter Parameters</h3>
                 <p class="text-xs text-slate-400 mt-1">Maximum 100 leads per individual search query.</p>
             </div>
 
-            <form method="POST" action="{{ route('lead-searches.store') }}" @submit.prevent="submitForm" class="p-6 space-y-6">
+            <form method="POST" action="{{ route('lead-searches.store') }}" @submit.prevent="submitForm" class="px-6 py-4 space-y-4">
                 @csrf
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {{-- Target Location --}}
                     <div class="space-y-1 col-span-1 md:col-span-2">
                         <label for="target_location" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Target Location *</label>

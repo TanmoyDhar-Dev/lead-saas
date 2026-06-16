@@ -190,8 +190,8 @@
                             <input type="number" name="search_limit" x-model.number="searchLimit" required min="0" class="w-full bg-slate-50/50 border-slate-200/50 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-2.5">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Expiration Date (Min 1 Month)</label>
-                            <input type="date" name="expiry_date" x-model="expiryDate" required min="{{ now()->addMonth()->format('Y-m-d') }}" class="w-full bg-slate-50/50 border-slate-200/50 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-2.5">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Expiration Date</label>
+                            <input type="date" name="expiry_date" x-model="expiryDate" class="w-full bg-slate-50/50 border-slate-200/50 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-2.5">
                         </div>
                     </div>
 

@@ -155,15 +155,21 @@ class AdminUserController extends Controller
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'search_limit' => 'required|integer|min:0',
-            'expiry_date' => 'required|date|after_or_equal:' . now()->addMonth()->format('Y-m-d'),
+            'expiry_date' => 'nullable|date',
         ]);
+
+        $updateData = [
+            'search_limit' => $validated['search_limit'],
+        ];
+
+        // Only update expiry_date if it was actually provided
+        if (!empty($validated['expiry_date'])) {
+            $updateData['expiry_date'] = $validated['expiry_date'];
+        }
 
         \App\Models\UserPlan::updateOrCreate(
             ['user_id' => $validated['user_id']],
-            [
-                'search_limit' => $validated['search_limit'],
-                'expiry_date' => $validated['expiry_date']
-            ]
+            $updateData
         );
 
         return back()->with('success', 'User plan updated successfully.');
