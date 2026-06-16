@@ -14,8 +14,9 @@
                         <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recipient</th>
                         <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Subject</th>
                         <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                        {{-- <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sent At</th> --}}
+                        <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sent At</th>
                         <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Opened At</th>
+                        <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Opens</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -32,23 +33,28 @@
                                 {{ $recipient->status }}
                             </span>
                         </td>
-                        {{-- <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-6 py-4 whitespace-nowrap">
                             @if($recipient->sent_at)
                                 <div class="text-sm font-bold text-slate-800">{{ $recipient->sent_at->format('M d, Y') }}</div>
                                 <div class="text-xs text-slate-500">{{ $recipient->sent_at->format('H:i') }}</div>
                             @else
                                 <span class="text-slate-400 text-sm">—</span>
                             @endif
-                        </td> --}}                     
+                        </td>                      
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-bold text-brand-blue">{{ $recipient->opened_at?->format('M d, Y') }}</div>
                             <div class="text-xs text-slate-500">{{ $recipient->opened_at?->format('h:i A') }}</div>
                         </td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="inline-flex items-center justify-center min-w-[2rem] px-2 py-1 rounded-lg bg-blue-50 text-brand-blue text-xs font-bold">
+                                {{ $recipient->open_count ?? 0 }}
+                            </span>
+                        </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-16 text-center text-slate-400 text-sm">
-                            No opened emails yet. Opens will appear here once recipients view your outreach.
+                        <td colspan="6" class="px-6 py-16 text-center text-slate-400 text-sm">
+                            No opened emails yet. Opens are tracked only for emails sent with <strong>Send Immediately</strong> (not drafts).
                         </td>
                     </tr>
                     @endforelse
