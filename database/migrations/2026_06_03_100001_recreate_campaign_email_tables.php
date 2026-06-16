@@ -63,6 +63,7 @@ return new class extends Migration
             $table->timestamp('drafted_at')->nullable();
             $table->timestamp('sent_at')->nullable();
             $table->timestamp('opened_at')->nullable();
+            $table->unsignedInteger('open_count')->default(0);
             $table->timestamp('clicked_at')->nullable();
             $table->timestamp('replied_at')->nullable();
             $table->timestamp('bounced_at')->nullable();

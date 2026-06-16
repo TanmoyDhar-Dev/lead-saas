@@ -35,6 +35,7 @@ class CampaignRecipient extends Model
         'drafted_at',
         'sent_at',
         'opened_at',
+        'open_count',
         'clicked_at',
         'replied_at',
         'bounced_at',
