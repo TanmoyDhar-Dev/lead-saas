@@ -36,7 +36,7 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             @if($recipient->sent_at)
                                 <div class="text-sm font-bold text-slate-800">{{ $recipient->sent_at->format('M d, Y') }}</div>
-                                <div class="text-xs text-slate-500">{{ $recipient->sent_at->format('H:i A') }}</div>
+                                <div class="text-xs text-slate-500">{{ $recipient->sent_at->format('h:i A') }}</div>
                             @else
                                 <span class="text-slate-400 text-sm">—</span>
                             @endif
