@@ -177,13 +177,13 @@
 
                             {{-- Body --}}
                             <div>
-                                <label class="text-xs font-bold text-slate-400">Body</label>
+                                <label class="text-xs font-bold text-slate-400">Body *</label>
                                 <textarea name="body" x-model="form.body" rows="6" required class="w-full bg-slate-50 border-slate-200 rounded-xl mt-1 p-4 text-sm focus:ring-brand-blue focus:border-brand-blue" placeholder="Hi..."></textarea>
                             </div>
 
                             {{-- Signature / Context --}}
                             <div>
-                                <label class="text-xs font-bold text-slate-400 mb-2 block">Signature Context (Optional)</label>
+                                <label class="text-xs font-bold text-slate-400 mb-2 block">Signature Context *</label>
                                 <div class="grid grid-cols-2 gap-4">
                                     <input name="sender_name" x-model="form.sender_name" placeholder="Sender Name" class="bg-slate-50 border-slate-200 rounded-xl p-3 text-sm focus:ring-brand-blue focus:border-brand-blue">
                                     <input name="sender_role" x-model="form.sender_role" placeholder="Sender Role/Position" class="bg-slate-50 border-slate-200 rounded-xl p-3 text-sm focus:ring-brand-blue focus:border-brand-blue">
