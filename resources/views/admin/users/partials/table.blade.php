@@ -1,129 +1,107 @@
-@php
-    $userPayloadFields = [
-        'id', 'name', 'email', 'role', 'status',
-        'lead_search_limit', 'lead_export_limit', 'lead_storage_limit',
-        'email_send_limit', 'notes',
-    ];
-@endphp
-<div class="p-0 overflow-x-auto">
-    <table class="w-full text-left border-collapse">
-        <thead>
-            <tr class="bg-slate-50/50 border-b border-slate-100">
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">User Information</th>
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Role & Status</th>
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Limits</th>
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Joined</th>
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+<div class="p-0 overflow-x-auto no-scrollbar">
+    <table class="w-full text-left border-separate border-spacing-0">
+        <thead class="bg-slate-50/50 sticky top-0 z-10 backdrop-blur-md">
+            <tr class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">
+                <th class="px-8 py-5 border-b border-slate-100">Operator</th>
+                <th class="px-6 py-5 border-b border-slate-100 text-center">Security</th>
+                <th class="px-6 py-5 border-b border-slate-100">Quotas</th>
+                <th class="px-6 py-5 border-b border-slate-100 text-center">Expiry</th>
+                <th class="px-8 py-5 border-b border-slate-100 text-right">Actions</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
-            @forelse ($users as $user)
-            <tr class="hover:bg-slate-50 transition-colors group">
-                <td class="px-6 py-4">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-sm mr-4 group-hover:bg-brand-blue group-hover:text-white transition-all">
-                            {{ strtoupper(substr($user->name, 0, 1)) }}
+        <tbody class="divide-y divide-slate-50">
+            @forelse($users as $user)
+            <tr class="group hover:bg-slate-50/50 transition-all">
+                <td class="px-8 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center font-black text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all uppercase text-[10px] border border-slate-200">
+                            {{ strtoupper(substr($user->name, 0, 2)) }}
                         </div>
                         <div>
-                            <div class="text-sm font-bold text-slate-800">{{ $user->name }}</div>
-                            <div class="text-[10px] text-slate-400 font-medium">{{ $user->email }}</div>
+                            <div class="font-bold text-slate-900 text-sm tracking-tight leading-none mb-1">{{ $user->name }}</div>
+                            <div class="text-[10px] text-slate-400 font-medium lowercase tracking-tight">{{ $user->email }}</div>
                         </div>
-                    </div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="flex flex-col space-y-1">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold w-fit {{ $user->role === 'admin' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700' }}">
-                            {{ strtoupper($user->role) }}
-                        </span>
-                        <span @class([
-                            'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold w-fit',
-                            'bg-emerald-50 text-emerald-700' => $user->status === 'active',
-                            'bg-amber-50 text-amber-700' => $user->status === 'inactive',
-                            'bg-red-50 text-red-700' => ! in_array($user->status, ['active', 'inactive'], true),
-                        ])>
-                            {{ strtoupper($user->status) }}
-                        </span>
                     </div>
                 </td>
                 <td class="px-6 py-4 text-center">
-                    @if($user->role !== 'admin')
-                        @if($user->userPlan)
-                            <div class="flex flex-col items-center space-y-1.5">
-                                <div class="text-[10px] font-mono font-bold text-slate-700 bg-slate-50 px-3 py-1 rounded-lg border border-slate-200" title="Searches Used / Limit">
-                                    {{ number_format($user->userPlan->searches_used) }} / {{ $user->userPlan->search_limit > 0 ? number_format($user->userPlan->search_limit) : '∞' }}
-                                </div>
-                                @if($user->userPlan->expiry_date)
-                                    @php
-                                        $isPast = now()->startOfDay()->gt($user->userPlan->expiry_date);
-                                        $days = (int) now()->startOfDay()->diffInDays($user->userPlan->expiry_date);
-                                    @endphp
-                                    @if($isPast)
-                                        <span class="text-[9px] font-bold text-red-500 uppercase tracking-wider">Expired</span>
-                                    @elseif($days === 0)
-                                        <span class="text-[9px] font-bold text-amber-500 uppercase tracking-wider">Expires Today</span>
-                                    @else
-                                        <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">{{ $days }} {{ Str::plural('Day', $days) }} Left</span>
-                                    @endif
-                                @else
-                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">No Expiry</span>
-                                @endif
-                            </div>
-                        @else
-                            <span class="text-[10px] text-slate-400 italic">No Plan Configured</span>
-                        @endif
+                    @if($user->is_admin)
+                        <span class="px-2 py-0.5 bg-slate-900 text-white text-[8px] font-black uppercase rounded shadow-sm">System Access</span>
                     @else
-                        <div class="text-[10px] font-bold text-brand-blue bg-blue-50 px-3 py-1 rounded-lg border border-blue-100 inline-block uppercase">
-                            UNLIMITED ACCESS
+                        <div class="flex items-center justify-center gap-2">
+                            <div class="w-1.5 h-1.5 rounded-full {{ str_contains((string)$user->subscription_status, 'Active') ? 'bg-emerald-500' : 'bg-rose-500' }}"></div>
+                            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">{{ $user->subscription_status }}</span>
                         </div>
                     @endif
                 </td>
-                <td class="px-6 py-4 text-xs text-slate-500 font-medium">
-                    {{ $user->created_at->format('M d, Y') }}
+                <td class="px-6 py-4">
+                    @if(!$user->is_admin)
+                    <div class="flex items-center gap-4">
+                        {{-- Query Quota --}}
+                        <div class="w-24">
+                            <div class="flex justify-between items-end text-[8px] font-black uppercase mb-1.5">
+                                <span class="text-slate-400 tracking-widest">Queries</span>
+                                <span class="text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded shadow-sm">
+                                    {{ $user->profile_usage }}<span class="text-slate-400 mx-0.5">/</span>{{ $user->query_limit }}
+                                </span>
+                            </div>
+                            <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                                <div class="h-full bg-indigo-500 rounded-full transition-all duration-500" 
+                                     style="width: {{ min(100, ($user->query_limit > 0 ? ($user->profile_usage / $user->query_limit) * 100 : 0)) }}%"></div>
+                            </div>
+                        </div>
+
+                        {{-- Lead Quota --}}
+                        <div class="w-24">
+                            <div class="flex justify-between items-end text-[8px] font-black uppercase mb-1.5">
+                                <span class="text-slate-400 tracking-widest">Leads</span>
+                                <span class="text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded shadow-sm">
+                                    {{ $user->results_count }}<span class="text-slate-400 mx-0.5">/</span>{{ $user->profile_limit }}
+                                </span>
+                            </div>
+                            <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                                <div class="h-full bg-amber-500 rounded-full transition-all duration-500" 
+                                     style="width: {{ min(100, ($user->profile_limit > 0 ? ($user->results_count / $user->profile_limit) * 100 : 0)) }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    @else
+                        <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest italic flex items-center gap-2">
+                            <div class="w-1 h-1 rounded-full bg-slate-200"></div> System Root
+                        </span>
+                    @endif
                 </td>
-                <td class="px-6 py-4 text-right">
-                    <div class="flex justify-end items-center space-x-2">
-                        @if($user->role !== 'admin')
-                            <button @click="openEditProfile(@js($user->only($userPayloadFields)))" class="p-2 text-slate-400 hover:text-brand-blue transition-colors" title="Edit Profile">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                            </button>
-
-                            <button @click="
-                                selectedUserId = '{{ $user->id }}';
-                                selectedUserName = '{{ $user->name }}';
-                                searchLimit = {{ $user->userPlan->search_limit ?? 0 }};
-                                expiryDate = '{{ optional($user->userPlan)->expiry_date ? $user->userPlan->expiry_date->format('Y-m-d') : '' }}';
-                                showPlanModal = true;
-                            " class="p-2 text-slate-400 hover:text-emerald-600 transition-colors" title="Edit Plan">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            </button>
-                            
-                            <form action="{{ route('admin.users.toggle-status', $user) }}" method="POST" class="inline">
-                                @csrf
-                                <button type="submit" class="p-2 {{ $user->status === 'active' ? 'text-slate-400 hover:text-amber-600' : 'text-slate-400 hover:text-emerald-600' }} transition-colors" title="{{ $user->status === 'active' ? 'Suspend' : 'Activate' }}">
-                                    @if($user->status === 'active')
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
-                                    @else
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                                    @endif
-                                </button>
-                            </form>
-
-                            <form action="{{ route('admin.users.destroy', $user) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="p-2 text-slate-400 hover:text-red-600 transition-colors" title="Delete User">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
-                            </form>
+                <td class="px-6 py-4 text-center">
+                    @if(!$user->is_admin && $user->access_until)
+                        <div class="text-[11px] font-bold text-slate-700">{{ \Carbon\Carbon::parse($user->access_until)->format('d M, Y') }}</div>
+                        @php
+                            $isPast = \Carbon\Carbon::parse($user->access_until)->isPast();
+                            $days = ceil(now()->diffInDays(\Carbon\Carbon::parse($user->access_until), false));
+                        @endphp
+                        <div class="text-[8px] font-black uppercase {{ $isPast ? 'text-rose-400' : 'text-indigo-400' }}">
+                            {{ $isPast ? 'Terminated' : $days . ' Days' }}
+                        </div>
+                    @else
+                        <span class="text-slate-300 text-[9px] font-bold uppercase tracking-widest">Permanent</span>
+                    @endif
+                </td>
+                <td class="px-8 py-4 text-right">
+                    <div class="flex items-center justify-end gap-2">
+                        @if(!$user->is_admin)
+                            <button type="button" onclick="openStatusModal('{{ $user->id }}', '{{ $user->email }}')" class="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white px-3 py-1.5 rounded-lg transition-all">Security</button>
+                            <button type="button" onclick="openLimitModal('{{ $user->id }}', '{{ $user->name }}', '{{ $user->query_limit }}', '{{ $user->profile_limit }}')" class="text-[9px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white px-3 py-1.5 rounded-lg transition-all">Limits</button>
+                            <button type="button" onclick="openPaymentModal('{{ $user->id }}', '{{ $user->email }}')" class="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-lg transition-all">Billing</button>
+                            <button type="button" onclick="openDeleteModal('{{ $user->id }}', '{{ $user->email }}')" class="text-[9px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500 hover:text-white px-3 py-1.5 rounded-lg transition-all">Delete</button>
                         @else
-                            <span class="text-[10px] font-bold text-slate-300 italic uppercase">System Protected</span>
+                            <span class="text-[8px] font-black text-slate-200 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">Root Protected</span>
                         @endif
                     </div>
                 </td>
             </tr>
             @empty
             <tr>
-                <td colspan="5" class="px-6 py-12 text-center text-slate-400 text-sm">No users found matching your criteria.</td>
+                <td colspan="5" class="px-8 py-10 text-center text-slate-400 font-bold">
+                    No users found.
+                </td>
             </tr>
             @endforelse
         </tbody>

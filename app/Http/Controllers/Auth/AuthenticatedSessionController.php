@@ -28,6 +28,35 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $user = auth()->user(); 
+
+        if (!$user->isActive() && !$user->isAdmin()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            
+            return redirect()->route('login')->with('account_error', 'Your account has been deactivated. Please contact your administrator.');
+        }
+
+        // IMPORTANT: 'security_status' is on the related 'userPlan' table
+        $rawStatus = $user->userPlan->security_status ?? ''; 
+
+        // Normalize to lowercase to prevent case-mismatch bugs
+        $status = strtolower(trim($rawStatus));
+
+        $blockedStatuses = [
+            \App\Models\UserPlan::SECURITY_INACTIVE_REVOKED,
+            \App\Models\UserPlan::SECURITY_PAST_DUE,
+        ];
+
+        if (in_array($status, $blockedStatuses) && !$user->isAdmin()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            
+            return redirect()->route('login')->with('account_error', 'System Access Revoked. Please contact your administrator.');
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

@@ -112,17 +112,20 @@
                 <form :action="'/templates/' + viewData.id" method="POST">
                     @csrf
                     @method('PUT')
-                    <input type="hidden" name="name" :value="viewData.name">
                     <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                        <h3 class="font-bold text-slate-800 text-lg" x-text="viewData.name"></h3>
+                        <h3 class="font-bold text-slate-800 text-lg">Edit Template</h3>
                         <button type="button" @click="showViewModal = false" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-200 transition-all">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
                     <div class="p-6 overflow-y-auto max-h-[70vh] bg-slate-50 space-y-4">
                         <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Template Name</label>
+                            <input type="text" name="name" x-model="viewData.name" :readonly="viewData.is_system_sample && !isAdmin" class="w-full bg-white p-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-800 focus:ring-brand-blue focus:border-brand-blue disabled:bg-slate-50 transition-all" required>
+                        </div>
+                        <div>
                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Subject</label>
-                            <input type="text" name="subject" x-model="viewData.subject" :readonly="viewData.is_system_sample && !isAdmin" class="w-full bg-white p-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-800 focus:ring-brand-blue focus:border-brand-blue disabled:bg-slate-50 transition-all">
+                            <input type="text" name="subject" x-model="viewData.subject" :readonly="viewData.is_system_sample && !isAdmin" class="w-full bg-white p-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-800 focus:ring-brand-blue focus:border-brand-blue disabled:bg-slate-50 transition-all" required>
                         </div>
                         <div>
                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Body Preview</label>

@@ -15,17 +15,29 @@
 >
     <div class="flex flex-col h-full">
         {{-- Logo --}}
-        <div class="flex items-center h-[77px] border-b border-navy-800 bg-navy-950 transition-all duration-300"
-             :class="sidebarCollapsed ? 'justify-center px-0' : 'px-5'">
-            <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 min-w-0">
-                <div class="w-9 h-9 bg-brand-blue rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                </div>
-                <span class="text-white font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden transition-all duration-300"
-                      :class="sidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">
-                    eGSales AI
-                </span>
+        <div class="h-16 bg-white border-b border-slate-200 flex items-center px-4 relative"
+             :class="sidebarCollapsed ? 'justify-center px-0' : ''">
+
+            <a href="{{ route('dashboard') }}" class="flex items-center overflow-hidden"
+               :class="sidebarCollapsed ? 'w-10' : 'w-48'">
+                <img src="{{ asset('logo.png') }}"
+                     alt="eGSales AI"
+                     width="150" height="48"
+                     :class="sidebarCollapsed ? 'h-10 w-10 min-w-[40px] object-cover object-left' : 'h-12 w-auto'"
+                     class="max-w-none">
             </a>
+
+            <button @click="toggleCollapse()"
+                    class="absolute right-2 p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-all z-30"
+                    title="Toggle Sidebar">
+                <svg class="w-5 h-5 transition-transform duration-300" 
+                     :class="sidebarCollapsed ? 'rotate-180' : ''" 
+                     fill="none" 
+                     stroke="currentColor" 
+                     viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                </svg>
+            </button>
         </div>
 
         {{-- Navigation --}}
@@ -73,6 +85,13 @@
                         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                         <span class="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300"
                               :class="sidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">Opened Emails</span>
+                    </a>
+
+                    {{-- Billing --}}
+                    <a href="{{ route('billing.index') }}" class="{{ $navLinkClass(request()->routeIs('billing.*')) }}" title="Billing">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
+                        <span class="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300"
+                              :class="sidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">Billing</span>
                     </a>
 
                 </nav>
@@ -131,14 +150,11 @@
            x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full">
 
         {{-- Logo --}}
-        <div class="flex items-center justify-between h-[65px] px-5 bg-navy-950 border-b border-navy-800">
-            <a href="{{ route('dashboard') }}" class="flex items-center space-x-3">
-                <div class="w-9 h-9 bg-brand-blue rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                </div>
-                <span class="text-white font-bold text-lg tracking-tight">eGSales AI</span>
+         <div class="flex items-center justify-between h-[65px] px-5 bg-white border-b border-slate-200/60">
+            <a href="{{ route('dashboard') }}" class="flex items-center">
+                <img src="{{ asset('logo.png') }}" class="h-9 w-auto" alt="eGSales AI">
             </a>
-            <button @click="sidebarOpen = false" class="text-slate-400 hover:text-white focus:outline-none transition-colors">
+            <button @click="sidebarOpen = false" class="text-slate-400 hover:text-slate-600 focus:outline-none transition-colors">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
@@ -169,6 +185,10 @@
                     <a href="{{ route('opened-emails.index') }}" @click="sidebarOpen = false" class="{{ $navLinkClass(request()->routeIs('opened-emails.*')) }}">
                         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                         <span class="ml-3">Opened Emails</span>
+                    </a>
+                    <a href="{{ route('billing.index') }}" @click="sidebarOpen = false" class="{{ $navLinkClass(request()->routeIs('billing.*')) }}">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
+                        <span class="ml-3">Billing</span>
                     </a>
 
                 </nav>

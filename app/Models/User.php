@@ -57,6 +57,11 @@ class User extends Authenticatable
         return $this->hasMany(ConnectedMailbox::class);
     }
 
+    public function billingHistories()
+    {
+        return $this->hasMany(BillingHistory::class)->orderByDesc('created_at');
+    }
+
     public function microsoftMailbox()
     {
         return $this->hasOne(ConnectedMailbox::class)->where('provider', 'microsoft');
@@ -102,4 +107,46 @@ class User extends Authenticatable
 
         return Lead::visibleTo($this)->count() >= $this->lead_storage_limit;
     }
+
+    public function getIsAdminAttribute(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function getSubscriptionStatusAttribute(): string
+    {
+        if ($this->isAdmin()) {
+            return 'System Access';
+        }
+        if ($this->userPlan) {
+            return $this->userPlan->security_label;
+        }
+        return 'No Plan Configured';
+    }
+
+    public function getAccessUntilAttribute()
+    {
+        return $this->userPlan ? $this->userPlan->expiry_date : null;
+    }
+
+    public function getQueryLimitAttribute(): int
+    {
+        return $this->userPlan ? (int) $this->userPlan->search_limit : 0;
+    }
+
+    public function getProfileLimitAttribute(): int
+    {
+        return $this->userPlan ? (int) $this->userPlan->lead_limit : 0;
+    }
+
+    public function getProfileUsageAttribute(): int
+    {
+        return $this->userPlan ? (int) $this->userPlan->searches_used : 0;
+    }
+
+    public function getResultsCountAttribute(): int
+    {
+        return $this->leads()->count();
+    }
 }
+

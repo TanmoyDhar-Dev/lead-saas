@@ -17,11 +17,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'active_user' => \App\Http\Middleware\EnsureUserIsActive::class,
             'n8n.webhook' => \App\Http\Middleware\VerifyN8nWebhookSecret::class,
-            'plan_active' => \App\Http\Middleware\EnsurePlanIsActive::class,
-        ]);
-        
-        $middleware->web(append: [
-            \App\Http\Middleware\EnsurePlanIsActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

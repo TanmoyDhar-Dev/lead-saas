@@ -155,11 +155,14 @@ class AdminUserController extends Controller
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'search_limit' => 'required|integer|min:0',
+            'lead_limit' => 'required|integer|min:0',
             'expiry_date' => 'nullable|date',
+            'payment_status' => 'required|string|in:paid,pending',
         ]);
 
         $updateData = [
             'search_limit' => $validated['search_limit'],
+            'lead_limit' => $validated['lead_limit'],
         ];
 
         // Only update expiry_date if it was actually provided
@@ -167,11 +170,127 @@ class AdminUserController extends Controller
             $updateData['expiry_date'] = $validated['expiry_date'];
         }
 
-        \App\Models\UserPlan::updateOrCreate(
-            ['user_id' => $validated['user_id']],
-            $updateData
-        );
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $updateData) {
+            \App\Models\UserPlan::updateOrCreate(
+                ['user_id' => $validated['user_id']],
+                $updateData
+            );
+
+            if ($validated['payment_status'] === 'paid') {
+                \App\Models\BillingHistory::create([
+                    'user_id' => $validated['user_id'],
+                    'amount' => null, // Or logic to calculate amount
+                    'currency' => 'USD',
+                    'description' => 'Manual Plan Upgrade',
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                ]);
+            }
+        });
 
         return back()->with('success', 'User plan updated successfully.');
     }
+
+    public function updateStatus(Request $request, User $user)
+    {
+        $statusMap = [
+            'Active (Paid)' => \App\Models\UserPlan::SECURITY_ACTIVE_PAID,
+            'Inactive (Revoke Access)' => \App\Models\UserPlan::SECURITY_INACTIVE_REVOKED,
+            'Past Due (Payment Failed)' => \App\Models\UserPlan::SECURITY_PAST_DUE,
+        ];
+        $securityStatus = $statusMap[$request->status] ?? \App\Models\UserPlan::SECURITY_ACTIVE_PAID;
+        
+        $user->userPlan()->updateOrCreate(
+            ['user_id' => $user->id],
+            ['security_status' => $securityStatus]
+        );
+        
+        return back()->with('success', "Status updated to {$request->status}.");
+    }
+
+    public function updateLimit(Request $request, User $user)
+    {
+        $request->validate([
+            'query_limit' => 'required|integer|min:0',
+            'profile_limit' => 'required|integer|min:0',
+        ]);
+        
+        $user->userPlan()->updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'search_limit' => (int) $request->query_limit,
+                'lead_limit' => (int) $request->profile_limit,
+            ]
+        );
+        
+        return back()->with('success', "Quotas for {$user->name} updated: {$request->query_limit} Queries / {$request->profile_limit} Leads.");
+    }
+
+    public function updatePayment(Request $request, User $user)
+    {
+        $request->validate([
+            'amount'            => 'required|numeric|min:0',
+            'method'            => 'required|string',
+            'update_mode'       => 'required|string', 
+            'duration_extended' => 'nullable|string',
+            'manual_expiry'     => 'nullable|date',
+        ]);
+
+        $newExpiry = null;
+
+        $newExpiry = null;
+
+        if ($request->update_mode === 'extend') {
+            if ($request->filled('duration_extended')) {
+                $currentExpiry = ($user->userPlan && $user->userPlan->expiry_date && $user->userPlan->expiry_date->isFuture()) 
+                    ? \Carbon\Carbon::parse($user->userPlan->expiry_date) 
+                    : now();
+
+                $newExpiry = match ($request->duration_extended) {
+                    '1 Month'  => $currentExpiry->addMonth(),
+                    '3 Months' => $currentExpiry->addMonths(3),
+                    '1 Year'   => $currentExpiry->addYear(),
+                    default    => null,
+                };
+            }
+        } else {
+            if ($request->manual_expiry) {
+                $newExpiry = \Carbon\Carbon::parse($request->manual_expiry);
+            }
+        }
+
+        $targetDateFormatted = $newExpiry ? $newExpiry->format('d M Y') : (($user->userPlan && $user->userPlan->expiry_date) ? $user->userPlan->expiry_date->format('d M Y') : 'N/A');
+        
+        if ($request->update_mode === 'extend') {
+            $subNote = $request->filled('duration_extended') ? "+ {$request->duration_extended}" : "Payment Only";
+        } else {
+            $subNote = "Manual Edit";
+        }
+        
+        $combinedNote = "{$targetDateFormatted}|{$subNote}";
+
+        \App\Models\BillingHistory::create([
+            'user_id'       => $user->id,
+            'amount'        => $request->amount ?? 0.00,
+            'currency'      => 'USD',
+            'gateway'       => $request->method,
+            'description'   => $request->update_mode === 'extend' ? 'Manual Plan Extension' : 'Plan Expiry Adjustment',
+            'duration_note' => $combinedNote,
+            'status'        => 'Paid',
+            'paid_at'       => now(),
+        ]);
+
+        if ($newExpiry) {
+            $user->userPlan()->updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'expiry_date'     => $newExpiry,
+                    'security_status' => \App\Models\UserPlan::SECURITY_ACTIVE_PAID
+                ]
+            );
+        }
+
+        return back()->with('success', "Account validity updated to " . $targetDateFormatted);
+    }
 }
+

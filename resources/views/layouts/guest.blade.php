@@ -23,10 +23,8 @@
 
             <div class="z-10 w-full sm:max-w-md px-6 py-12 bg-white shadow-2xl shadow-slate-200/50 sm:rounded-3xl border border-slate-100">
                 <div class="flex flex-col items-center mb-8">
-                    <div class="w-16 h-16 bg-navy-900 rounded-2xl flex items-center justify-center shadow-xl mb-4">
-                        <svg class="w-10 h-10 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    </div>
-                    <h1 class="text-2xl font-bold text-slate-800 tracking-tight">eGSales AI</h1>
+                    <img src="{{ asset('logo.png') }}" alt="eGSales AI" class="h-14 w-auto mb-4 drop-shadow-md">
+                    <!-- <h1 class="text-2xl font-bold text-slate-800 tracking-tight">eGSales AI</h1> -->
                     <p class="text-slate-400 text-sm mt-1">LeadFlow Intelligence Portal</p>
                 </div>
 

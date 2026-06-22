@@ -33,15 +33,11 @@
             <div class="flex-1 flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-300">
 
                 <!-- Top Header -->
-                <header class="bg-white border-b border-slate-200 py-4 px-6 lg:px-8 sticky top-0 z-10 flex justify-between items-center">
+                <header class="bg-white border-b border-slate-200 h-16 px-6 lg:px-8 sticky top-0 z-10 flex justify-between items-center">
                     <div class="flex items-center">
                         <!-- Mobile hamburger -->
                         <button @click="sidebarOpen = true" class="lg:hidden mr-4 text-slate-500 hover:text-slate-700 focus:outline-none">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                        </button>
-                        <!-- Desktop collapse toggle -->
-                        <button @click="toggleCollapse()" class="hidden lg:flex mr-4 text-slate-400 hover:text-slate-700 focus:outline-none transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                         </button>
                         <div>
                             <h2 class="text-xl font-bold text-slate-800">
@@ -123,8 +119,10 @@
                 @endif
 
                 <!-- Page Content -->
-                <main class="p-6 lg:p-8 flex-1">
-                    {{ $slot }}
+                <main class="flex-1 bg-[#f8fafc] overflow-y-auto no-scrollbar">
+                    <div class="max-w-7xl mx-auto pl-4 lg:pl-8 xl:pl-10 pr-4 lg:pr-6 py-6 lg:py-8">
+                        {{ $slot }}
+                    </div>
                 </main>
             </div>
         </div>

@@ -19,7 +19,7 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-Route::middleware(['auth', 'verified', 'active_user', 'plan_active'])->group(function () {
+Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     if (app()->environment('local')) {
         Route::get('/debug/leads-db-check', [LeadController::class, 'debugDbCheck'])->name('debug.leads-db-check');
         Route::get('/debug/lead-visibility', [LeadController::class, 'debugVisibility'])->name('debug.lead-visibility');
@@ -57,6 +57,9 @@ Route::middleware(['auth', 'verified', 'active_user', 'plan_active'])->group(fun
     Route::get('/opened-emails', [OpenedEmailController::class, 'index'])->name('opened-emails.index');
     Route::post('/leads/dispatch', [LeadSearchController::class, 'dispatchOutreach'])->name('leads.dispatch');
 
+    Route::get('/billing', [\App\Http\Controllers\BillingController::class, 'index'])->name('billing.index');
+    Route::get('/billing/invoice/{billingHistory}/download', [\App\Http\Controllers\BillingController::class, 'downloadInvoice'])->name('billing.invoice.download');
+    Route::delete('/billing/{billingHistory}', [\App\Http\Controllers\BillingController::class, 'destroy'])->name('billing.destroy');
 });
 
 Route::middleware('auth')->group(function () {
@@ -67,6 +70,18 @@ Route::middleware('auth')->group(function () {
         }
         return view('errors.suspended');
     })->name('account.suspended');
+
+    Route::get('/payment-required', function () {
+        $user = auth()->user();
+        if ($user->role === 'admin') {
+            return redirect()->route('dashboard');
+        }
+        $plan = $user->userPlan;
+        if ($plan && $plan->isAccessAllowed()) {
+            return redirect()->route('dashboard');
+        }
+        return view('errors.payment-required', ['securityLabel' => $plan ? $plan->security_label : 'Unknown']);
+    })->name('payment.required');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -88,6 +103,9 @@ Route::middleware(['auth', 'active_user', 'admin'])->prefix('admin')->name('admi
     Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
     Route::post('/users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
     Route::post('/users/plan', [AdminUserController::class, 'updatePlan'])->name('users.update-plan');
+    Route::post('/users/{user}/status', [AdminUserController::class, 'updateStatus'])->name('users.update-status');
+    Route::post('/users/{user}/limit', [AdminUserController::class, 'updateLimit'])->name('users.update-limit');
+    Route::post('/users/{user}/payment', [AdminUserController::class, 'updatePayment'])->name('users.update-payment');
 });
 
 require __DIR__.'/auth.php';

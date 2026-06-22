@@ -24,7 +24,12 @@ class TemplateController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:email_templates,name',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('email_templates', 'name')->where('user_id', auth()->id()),
+            ],
             'subject' => 'required|string|max:255',
             'body' => 'required|string',
             'signature_name' => 'nullable|string|max:255',
@@ -73,7 +78,14 @@ class TemplateController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:email_templates,name,' . $template->id,
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('email_templates', 'name')
+                    ->where('user_id', auth()->id())
+                    ->ignore($template->id),
+            ],
             'subject' => 'required|string|max:255',
             'body' => 'required|string',
             'signature_name' => 'nullable|string|max:255',
