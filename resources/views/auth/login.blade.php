@@ -159,7 +159,7 @@
                     <label class="block text-[10px] font-bold uppercase tracking-[0.3em] mb-2 ml-1 text-[#1A98C8]">Email</label>
                     <input type="email" name="email" value="{{ old('email') }}"
                         class="input-field w-full rounded-2xl px-5 py-4 text-sm @error('email') border-red-500/50 @enderror"
-                        placeholder="user@egsales.ai">
+                        placeholder="user@egsales.ai" required>
 
                     @error('email')
                     <p class="text-[10px] text-red-400 mt-2 ml-1 font-bold italic uppercase animate-pulse">
@@ -172,7 +172,7 @@
                     <label class="block text-[10px] font-bold uppercase tracking-[0.3em] mb-2 ml-1 text-[#1A98C8]">Password</label>
                     <input type="password" name="password"
                         class="input-field w-full rounded-2xl px-5 py-4 text-sm @error('password') border-red-500/50 @enderror"
-                        placeholder="••••••••••••">
+                        placeholder="••••••••••••" required>
 
                     @error('password')
                     <p class="text-[10px] text-red-400 mt-2 ml-1 font-bold italic uppercase animate-pulse">
@@ -183,7 +183,7 @@
 
                 <div class="pt-2">
                     <button type="submit" id="submitBtn" class="btn-glow w-full rounded-2xl py-4 font-extrabold text-[11px] uppercase tracking-[0.2em] text-white flex items-center justify-center gap-3">
-                        <span id="btnText">Initialize Session</span>
+                        <span id="btnText">Login</span>
                         <svg id="btnSpinner" class="hidden animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     </button>
                 </div>
@@ -206,7 +206,7 @@
 
         form.addEventListener('submit', function() {
             btn.disabled = true;
-            btnText.innerText = "Encrypting...";
+            btnText.innerText = "Signing in...";
             spinner.classList.remove('hidden');
         });
     </script>
