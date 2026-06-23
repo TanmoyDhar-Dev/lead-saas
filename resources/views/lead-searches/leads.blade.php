@@ -500,7 +500,7 @@
                 let url = new URL(e.target.closest('a').href);
                 let page = url.searchParams.get('page');
                 window.leadManager.filters.page = page;
-                window.leadManager.fetchLeads();
+                window.leadManager.fetchLeads(page);
             }
         });
     </script>
