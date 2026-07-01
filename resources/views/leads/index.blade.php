@@ -19,7 +19,9 @@
         @php
             $user = auth()->user();
             $plan = $user->userPlan;
-            $limitReached = $user->role !== 'admin' && $plan && $plan->search_limit > 0 && $plan->searches_used >= $plan->search_limit;
+            $searchLimitReached = $user->role !== 'admin' && $plan && $plan->search_limit > 0 && $plan->searches_used >= $plan->search_limit;
+            $leadLimitReached = $user->role !== 'admin' && $plan && $plan->lead_limit > 0 && $user->leads()->count() >= $plan->lead_limit;
+            $limitReached = $searchLimitReached || $leadLimitReached;
         @endphp
 
         {{-- ===== RUN HUNTER PANEL ===== --}}
@@ -86,7 +88,7 @@
                     @if($limitReached)
                         <button type="button" disabled
                                 class="bg-red-500 text-white cursor-not-allowed font-bold py-4 px-8 rounded-2xl flex items-center justify-center whitespace-nowrap shrink-0 opacity-80"
-                                title="Search limit reached">
+                                title="{{ $searchLimitReached ? 'Search' : 'Lead' }} limit reached">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                             LIMIT REACHED
                         </button>
