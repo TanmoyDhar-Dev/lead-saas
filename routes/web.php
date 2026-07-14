@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadSearchController;
 use App\Http\Controllers\OpenedEmailController;
+use App\Http\Controllers\ImportedLeadController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\Admin\AdminUserController;
 use Illuminate\Http\Request;
@@ -56,6 +57,12 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
 
     Route::get('/opened-emails', [OpenedEmailController::class, 'index'])->name('opened-emails.index');
     Route::post('/leads/dispatch', [LeadSearchController::class, 'dispatchOutreach'])->name('leads.dispatch');
+
+    Route::get('/imported-leads', [ImportedLeadController::class, 'index'])->name('imported-leads.index');
+    Route::post('/imported-leads/import', [ImportedLeadController::class, 'import'])->name('imported-leads.import');
+    Route::get('/imported-leads/{importedLead}', [ImportedLeadController::class, 'show'])->name('imported-leads.show');
+    Route::put('/imported-leads/{importedLead}', [ImportedLeadController::class, 'update'])->name('imported-leads.update');
+    Route::delete('/imported-leads/{importedLead}', [ImportedLeadController::class, 'destroy'])->name('imported-leads.destroy');
 
     Route::get('/billing', [\App\Http\Controllers\BillingController::class, 'index'])->name('billing.index');
     Route::get('/billing/invoice/{billingHistory}/download', [\App\Http\Controllers\BillingController::class, 'downloadInvoice'])->name('billing.invoice.download');
