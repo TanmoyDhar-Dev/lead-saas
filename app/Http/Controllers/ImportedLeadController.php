@@ -12,8 +12,16 @@ class ImportedLeadController extends Controller
 {
     public function index(Request $request)
     {
-        $query = ImportedLead::visibleTo($request->user())
-            ->with(['emails', 'phones'])
+        $user = $request->user();
+
+        $query = ImportedLead::visibleTo($user)
+            ->with([
+                'emails',
+                'phones',
+                'outreachRecipients' => fn ($q) => $q
+                    ->whereIn('status', ['sent', 'drafted', 'failed', 'pending'])
+                    ->orderByDesc('updated_at'),
+            ])
             ->orderByDesc('created_at');
 
         if ($q = trim((string) $request->input('q'))) {
@@ -28,11 +36,21 @@ class ImportedLeadController extends Controller
 
         $importedLeads = $query->paginate(20)->withQueryString();
 
+        $templateQuery = \App\Models\EmailTemplate::query();
+        if (! $user->isAdmin()) {
+            $templateQuery->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)->orWhere('is_system_sample', 'true');
+            });
+        }
+        $templates = $templateQuery->orderByDesc('is_default')->get();
+
+        $outlookConnected = $user->microsoftMailbox()->exists();
+
         if ($request->ajax()) {
             return view('imported-leads.partials.table', compact('importedLeads'))->render();
         }
 
-        return view('imported-leads.index', compact('importedLeads'));
+        return view('imported-leads.index', compact('importedLeads', 'templates', 'outlookConnected'));
     }
 
     public function import(Request $request, LeadImportService $importService)

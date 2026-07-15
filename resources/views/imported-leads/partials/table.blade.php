@@ -1,28 +1,41 @@
 <div class="p-0 overflow-x-auto">
-    <table class="w-full text-left border-collapse min-w-[1000px]">
+    <table class="w-full text-left border-collapse min-w-[1100px]">
         <thead>
             <tr class="bg-slate-50/50 border-b border-slate-100">
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Organization</th>
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Contact</th>
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Emails</th>
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Phones</th>
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Imported</th>
-                <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap sticky right-0 z-10 bg-slate-50/90 backdrop-blur border-l border-slate-100">Actions</th>
+                <th class="px-3 py-5 sticky left-0 z-10 bg-slate-50/90 backdrop-blur border-b border-r border-slate-100 w-10">
+                    <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" class="w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
+                </th>
+                <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Organization</th>
+                <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Contact</th>
+                <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Emails</th>
+                <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Outreach</th>
+                <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap sticky right-0 z-10 bg-slate-50/90 backdrop-blur border-l border-slate-100">Actions</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
             @forelse ($importedLeads as $lead)
+            @php
+                $outreachStatus = $lead->outreachRecipients->first()?->status;
+            @endphp
             <tr class="hover:bg-slate-50 transition-colors group">
-                <td class="px-6 py-4">
+                <td class="px-3 py-4 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-100" @click.stop>
+                    <input type="checkbox"
+                           value="{{ $lead->id }}"
+                           data-org="{{ e($lead->organization_name ?: '—') }}"
+                           data-contact="{{ e($lead->contact_name ?: '—') }}"
+                           x-model="selectedLeadIds"
+                           class="imported-lead-checkbox w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
+                </td>
+                <td class="px-3 py-4">
                     <div class="text-sm font-bold text-slate-800">{{ $lead->organization_name ?: '—' }}</div>
                     @if($lead->address)
                         <div class="text-[11px] text-slate-400 mt-0.5 line-clamp-1 max-w-[240px]" title="{{ $lead->address }}">{{ $lead->address }}</div>
                     @endif
                 </td>
-                <td class="px-6 py-4">
+                <td class="px-3 py-4">
                     <div class="text-sm font-medium text-slate-700">{{ $lead->contact_name ?: '—' }}</div>
                 </td>
-                <td class="px-6 py-4">
+                <td class="px-3 py-4">
                     @php $emails = $lead->emails; @endphp
                     @if($emails->isEmpty())
                         <span class="text-[10px] text-slate-300">—</span>
@@ -33,21 +46,20 @@
                         @endif
                     @endif
                 </td>
-                <td class="px-6 py-4">
-                    @php $phones = $lead->phones; @endphp
-                    @if($phones->isEmpty())
-                        <span class="text-[10px] text-slate-300">—</span>
+                <td class="px-3 py-4">
+                    @if($outreachStatus === 'sent')
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-600">Sent</span>
+                    @elseif($outreachStatus === 'drafted')
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-50 text-amber-600">Drafted</span>
+                    @elseif($outreachStatus === 'failed')
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-50 text-red-600">Failed</span>
+                    @elseif($outreachStatus === 'pending')
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-50 text-blue-600">Pending</span>
                     @else
-                        <div class="text-xs font-medium text-slate-700">{{ $phones->firstWhere('is_primary', true)?->phone ?? $phones->first()->phone }}</div>
-                        @if($phones->count() > 1)
-                            <div class="text-[10px] text-slate-400 mt-0.5">+{{ $phones->count() - 1 }} more</div>
-                        @endif
+                        <span class="text-[10px] text-slate-300">—</span>
                     @endif
                 </td>
-                <td class="px-6 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
-                    {{ optional($lead->created_at)->format('M d, Y') }}
-                </td>
-                <td class="px-6 py-4 text-right sticky right-0 z-10 bg-white group-hover:bg-slate-50 border-l border-slate-100">
+                <td class="px-3 py-4 text-right sticky right-0 z-10 bg-white group-hover:bg-slate-50 border-l border-slate-100">
                     <div class="flex items-center justify-end space-x-1">
                         <button type="button" @click="openDetail('{{ $lead->id }}')" class="p-2 text-slate-400 hover:text-brand-blue transition-colors" title="View">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
@@ -67,7 +79,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="6" class="px-6 py-16 text-center">
+                <td colspan="8" class="px-6 py-16 text-center">
                     <p class="text-slate-400 text-sm font-medium">No imported leads yet. Click Import Leads to upload a CSV or Excel file.</p>
                 </td>
             </tr>

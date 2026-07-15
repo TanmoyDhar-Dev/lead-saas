@@ -45,6 +45,11 @@ class ImportedLead extends Model
         return $this->hasMany(ImportedLeadPhone::class)->orderByDesc('is_primary');
     }
 
+    public function outreachRecipients(): HasMany
+    {
+        return $this->hasMany(ImportedOutreachRecipient::class);
+    }
+
     public function primaryEmail(): ?string
     {
         return $this->emails->firstWhere('is_primary', true)?->email

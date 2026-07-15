@@ -8,6 +8,7 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadSearchController;
 use App\Http\Controllers\OpenedEmailController;
 use App\Http\Controllers\ImportedLeadController;
+use App\Http\Controllers\ImportedLeadOutreachController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\Admin\AdminUserController;
 use Illuminate\Http\Request;
@@ -60,6 +61,7 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
 
     Route::get('/imported-leads', [ImportedLeadController::class, 'index'])->name('imported-leads.index');
     Route::post('/imported-leads/import', [ImportedLeadController::class, 'import'])->name('imported-leads.import');
+    Route::post('/imported-leads/outreach', [ImportedLeadOutreachController::class, 'dispatch'])->name('imported-leads.outreach');
     Route::get('/imported-leads/{importedLead}', [ImportedLeadController::class, 'show'])->name('imported-leads.show');
     Route::put('/imported-leads/{importedLead}', [ImportedLeadController::class, 'update'])->name('imported-leads.update');
     Route::delete('/imported-leads/{importedLead}', [ImportedLeadController::class, 'destroy'])->name('imported-leads.destroy');

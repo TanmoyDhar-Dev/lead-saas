@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        Import Leads
+        Imported Leads
     </x-slot>
 
     <x-slot name="subheader">
@@ -30,12 +30,25 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-            <button type="button" @click="openImportModal()"
-                    class="px-6 py-2 rounded-xl text-sm font-bold bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all flex items-center h-[42px]">
+            {{-- <button type="button" @click="openImportModal()"
+                    class="px-6 py-2 rounded-xl text-sm font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all flex items-center h-[42px]">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                Import Leads
+                Import
+            </button> --}}
+            <button type="button"
+                    @click="openOutreachModal()"
+                    :disabled="selectedLeadIds.length === 0"
+                    :class="selectedLeadIds.length === 0 ? 'opacity-50 cursor-not-allowed bg-slate-300 text-slate-500 shadow-none' : 'bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-blue-500/20'"
+                    class="px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center h-[42px]">
+                Email Outreach (<span x-text="selectedLeadIds.length"></span>)
             </button>
         </div>
+
+        @unless($outlookConnected)
+        <div class="rounded-2xl border border-amber-100 bg-amber-50 px-5 py-3 text-sm text-amber-800 font-medium">
+            Connect Microsoft Outlook under Integrations before sending or drafting outreach.
+        </div>
+        @endunless
 
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative" :class="loading ? 'opacity-60' : ''">
             <div id="imported-leads-table">
@@ -95,6 +108,109 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        {{-- Outreach Modal --}}
+        <div x-show="outreachOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4" @click.self="outreachOpen = false">
+            <div class="w-full max-w-5xl h-[90vh] bg-white rounded-xl flex overflow-hidden shadow-2xl relative" @click.stop>
+                <div class="w-1/3 bg-gray-50 flex flex-col border-r border-slate-200">
+                    <div class="p-6 border-b border-slate-200 bg-white shrink-0">
+                        <h3 class="font-bold text-slate-800">Selected Leads</h3>
+                        <div class="mt-4 text-2xl font-black text-brand-blue" x-text="selectedLeadIds.length"></div>
+                        <p class="text-xs text-slate-400 mt-1">Templates only · Microsoft Graph · no n8n</p>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4">
+                        <template x-for="id in selectedLeadIds" :key="id">
+                            <div class="p-3 bg-white border border-slate-200 rounded-xl mb-2">
+                                <div class="text-sm font-bold text-slate-800" x-text="leadLabel(id).org"></div>
+                                <div class="text-[11px] text-slate-500 mt-0.5" x-text="leadLabel(id).contact"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="w-2/3 flex flex-col bg-white">
+                    <form action="{{ route('imported-leads.outreach') }}" method="POST" enctype="multipart/form-data" class="flex-1 flex flex-col overflow-hidden">
+                        @csrf
+                        <template x-for="id in selectedLeadIds" :key="'oid'+id">
+                            <input type="hidden" name="imported_lead_ids[]" :value="id">
+                        </template>
+
+                        <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Delivery Mode *</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="delivery_mode" value="Save as Draft" class="peer sr-only" required checked>
+                                        <div class="p-3 bg-white border border-slate-200 rounded-xl peer-checked:border-brand-blue peer-checked:bg-blue-50 transition-all text-center">
+                                            <span class="text-xs font-bold text-slate-700 peer-checked:text-brand-blue">Save as Draft</span>
+                                        </div>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="delivery_mode" value="Send Immediately" class="peer sr-only">
+                                        <div class="p-3 bg-white border border-slate-200 rounded-xl peer-checked:border-brand-blue peer-checked:bg-blue-50 transition-all text-center">
+                                            <span class="text-xs font-bold text-slate-700 peer-checked:text-brand-blue">Send Immediately</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-slate-400">Template</label>
+                                <select x-model="selectedTemplate"
+                                        @change="applyTemplate()"
+                                        class="w-full bg-slate-50 border-slate-200 rounded-xl py-3 mt-1 text-sm focus:ring-brand-blue focus:border-brand-blue">
+                                    <option value="">Custom</option>
+                                    <template x-for="t in templatesData" :key="t.id">
+                                        <option :value="t.id" x-text="t.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Email Subject *</label>
+                                <input type="text" name="subject" x-model="outreachForm.subject" required class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-3 px-4">
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-slate-400">Body *</label>
+                                <textarea name="body" x-model="outreachForm.body" rows="6" required class="w-full bg-slate-50 border-slate-200 rounded-xl mt-1 p-4 text-sm focus:ring-brand-blue focus:border-brand-blue"></textarea>
+                                <p class="text-[10px] text-slate-400 mt-1">Placeholders: @{{fullName}}, @{{companyName}}, @{{email}}, @{{address}}</p>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-slate-400 mb-2 block">Signature</label>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <input name="sender_name" x-model="outreachForm.sender_name" placeholder="Sender Name" class="bg-slate-50 border-slate-200 rounded-xl p-3 text-sm focus:ring-brand-blue focus:border-brand-blue">
+                                    <input name="sender_role" x-model="outreachForm.sender_role" placeholder="Sender Role" class="bg-slate-50 border-slate-200 rounded-xl p-3 text-sm focus:ring-brand-blue focus:border-brand-blue">
+                                    <input name="sender_company" x-model="outreachForm.sender_company" placeholder="Sender Company" class="bg-slate-50 border-slate-200 rounded-xl p-3 text-sm focus:ring-brand-blue focus:border-brand-blue">
+                                    <input name="sender_address" x-model="outreachForm.sender_address" placeholder="Sender Address" class="bg-slate-50 border-slate-200 rounded-xl p-3 text-sm focus:ring-brand-blue focus:border-brand-blue">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-slate-400 mb-2 block">Attachments (Optional)</label>
+                                <div class="w-full flex items-center justify-center p-6 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 hover:bg-slate-100 hover:border-brand-blue transition-colors cursor-pointer relative">
+                                    <input type="file" name="attachments[]" multiple accept=".pdf,.doc,.docx,image/*" @change="outreachFiles = $event.target.files" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <div class="text-center pointer-events-none">
+                                        <svg class="mx-auto h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                        <span class="mt-2 block text-sm font-semibold text-slate-700">Drop files here or click to upload</span>
+                                        <span class="mt-1 block text-[10px] text-slate-400">PDF, DOC, DOCX, JPG, PNG · max 5 MB each</span>
+                                    </div>
+                                </div>
+                                <div x-show="outreachFiles.length > 0" class="mt-2 text-xs font-bold text-brand-blue">
+                                    <span x-text="outreachFiles.length + ' file(s) selected'"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 md:p-6 border-t border-slate-200 bg-white flex justify-end gap-3 shrink-0">
+                            <button type="button" @click="outreachOpen = false" class="px-6 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200">Cancel</button>
+                            <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white bg-brand-blue rounded-xl hover:bg-blue-600 shadow-lg shadow-blue-500/30">Send Outreach</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
 
@@ -241,6 +357,80 @@
                     emails: [''],
                     phones: [],
                 },
+                selectedLeadIds: [],
+                selectAll: false,
+                outreachOpen: false,
+                outlookConnected: @json($outlookConnected),
+                templatesData: @json($templates ?? []),
+                selectedTemplate: '',
+                outreachFiles: [],
+                outreachForm: {
+                    subject: '',
+                    body: '',
+                    sender_name: '',
+                    sender_role: '',
+                    sender_company: '',
+                    sender_address: '',
+                },
+
+                init() {
+                    const defaultTemplate = this.templatesData.find(t => t.is_default);
+                    if (defaultTemplate) {
+                        this.selectedTemplate = defaultTemplate.id;
+                        this.applyTemplate();
+                    }
+
+                    this.$watch('selectedLeadIds', (val) => {
+                        const totalCheckboxes = document.querySelectorAll('.imported-lead-checkbox').length;
+                        this.selectAll = totalCheckboxes > 0 && val.length === totalCheckboxes;
+                    });
+                },
+
+                toggleSelectAll() {
+                    if (this.selectAll) {
+                        const checkboxes = document.querySelectorAll('.imported-lead-checkbox');
+                        this.selectedLeadIds = Array.from(checkboxes).map(cb => cb.value);
+                    } else {
+                        this.selectedLeadIds = [];
+                    }
+                },
+
+                leadLabel(id) {
+                    const cb = document.querySelector('.imported-lead-checkbox[value="' + id + '"]');
+                    return {
+                        org: cb?.dataset?.org || 'Lead',
+                        contact: cb?.dataset?.contact || '',
+                    };
+                },
+
+                openOutreachModal() {
+                    if (this.selectedLeadIds.length === 0) return;
+                    if (!this.outlookConnected) {
+                        alert('Connect Microsoft Outlook first under Integrations.');
+                        return;
+                    }
+                    this.outreachFiles = [];
+                    this.outreachOpen = true;
+                },
+
+                applyTemplate() {
+                    const t = this.templatesData.find(temp => String(temp.id) === String(this.selectedTemplate));
+                    if (t) {
+                        this.outreachForm.subject = t.subject || '';
+                        this.outreachForm.body = t.body || '';
+                        this.outreachForm.sender_name = t.signature_name || '';
+                        this.outreachForm.sender_role = t.signature_position || '';
+                        this.outreachForm.sender_company = t.signature_company || '';
+                        this.outreachForm.sender_address = t.signature_address || '';
+                    } else {
+                        this.outreachForm.subject = '';
+                        this.outreachForm.body = '';
+                        this.outreachForm.sender_name = '';
+                        this.outreachForm.sender_role = '';
+                        this.outreachForm.sender_company = '';
+                        this.outreachForm.sender_address = '';
+                    }
+                },
 
                 get fileSizeLabel() {
                     if (!this.selectedFile) return '';
@@ -340,6 +530,8 @@
                         const html = await res.text();
                         const el = document.getElementById('imported-leads-table');
                         el.innerHTML = html;
+                        this.selectedLeadIds = [];
+                        this.selectAll = false;
                         if (window.Alpine?.initTree) window.Alpine.initTree(el);
                         window.history.replaceState({}, '', @js(route('imported-leads.index')) + (params.toString() ? '?' + params.toString() : ''));
                     } finally {

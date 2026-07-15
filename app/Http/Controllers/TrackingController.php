@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CampaignRecipient;
+use App\Models\ImportedOutreachRecipient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -24,6 +25,19 @@ class TrackingController extends Controller
 
             $recipient->open_count = (int) $recipient->open_count + 1;
             $recipient->save();
+        } else {
+            $importedRecipient = ImportedOutreachRecipient::query()
+                ->where('tracking_id', $tracking_id)
+                ->first();
+
+            if ($importedRecipient) {
+                if ($importedRecipient->opened_at === null) {
+                    $importedRecipient->opened_at = now();
+                }
+
+                $importedRecipient->open_count = (int) $importedRecipient->open_count + 1;
+                $importedRecipient->save();
+            }
         }
 
         return response(base64_decode(self::TRANSPARENT_GIF), 200, [
