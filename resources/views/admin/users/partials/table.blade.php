@@ -27,9 +27,12 @@
                     @if($user->is_admin)
                         <span class="px-2 py-0.5 bg-slate-900 text-white text-[8px] font-black uppercase rounded shadow-sm">System Access</span>
                     @else
-                        <div class="flex items-center justify-center gap-2">
-                            <div class="w-1.5 h-1.5 rounded-full {{ str_contains((string)$user->subscription_status, 'Active') ? 'bg-emerald-500' : 'bg-rose-500' }}"></div>
-                            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">{{ $user->subscription_status }}</span>
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="flex items-center justify-center gap-2">
+                                <div class="w-1.5 h-1.5 rounded-full {{ $user->status === 'active' ? 'bg-emerald-500' : 'bg-rose-500' }}"></div>
+                                <span class="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">{{ $user->status }}</span>
+                            </div>
+                            <span class="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">{{ $user->subscription_status }}</span>
                         </div>
                     @endif
                 </td>
@@ -87,7 +90,7 @@
                 <td class="px-8 py-4 text-right">
                     <div class="flex items-center justify-end gap-2">
                         @if(!$user->is_admin)
-                            <button type="button" onclick="openStatusModal('{{ $user->id }}', '{{ $user->email }}')" class="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white px-3 py-1.5 rounded-lg transition-all">Security</button>
+                            <button type="button" onclick="openStatusModal('{{ $user->id }}', '{{ $user->email }}', '{{ $user->status }}', '{{ e($user->subscription_status) }}')" class="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white px-3 py-1.5 rounded-lg transition-all">Security</button>
                             <button type="button" onclick="openLimitModal('{{ $user->id }}', '{{ $user->name }}', '{{ $user->query_limit }}', '{{ $user->profile_limit }}')" class="text-[9px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white px-3 py-1.5 rounded-lg transition-all">Limits</button>
                             <button type="button" onclick="openPaymentModal('{{ $user->id }}', '{{ $user->email }}')" class="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-lg transition-all">Billing</button>
                             <button type="button" onclick="openDeleteModal('{{ $user->id }}', '{{ $user->email }}')" class="text-[9px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500 hover:text-white px-3 py-1.5 rounded-lg transition-all">Delete</button>

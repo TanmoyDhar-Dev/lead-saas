@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ImportedLead;
+use App\Models\LeadCategory;
+use App\Models\User;
 use App\Services\LeadImport\LeadImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +20,7 @@ class ImportedLeadController extends Controller
             ->with([
                 'emails',
                 'phones',
+                'categories',
                 'outreachRecipients' => fn ($q) => $q
                     ->whereIn('status', ['sent', 'drafted', 'failed', 'pending'])
                     ->orderByDesc('updated_at'),
@@ -34,7 +37,20 @@ class ImportedLeadController extends Controller
             });
         }
 
+        $categoryId = trim((string) $request->input('category', ''));
+        if ($categoryId !== '') {
+            $query->whereHas('categories', function ($builder) use ($categoryId, $user) {
+                $builder->where('lead_categories.id', $categoryId)
+                    ->where('lead_categories.user_id', $user->id);
+            });
+        }
+
         $importedLeads = $query->paginate(20)->withQueryString();
+
+        $leadCategories = LeadCategory::query()
+            ->ownedBy($user)
+            ->orderBy('name')
+            ->get(['id', 'name', 'color']);
 
         $templateQuery = \App\Models\EmailTemplate::query();
         if (! $user->isAdmin()) {
@@ -50,13 +66,23 @@ class ImportedLeadController extends Controller
             return view('imported-leads.partials.table', compact('importedLeads'))->render();
         }
 
-        return view('imported-leads.index', compact('importedLeads', 'templates', 'outlookConnected'));
+        return view('imported-leads.index', compact(
+            'importedLeads',
+            'templates',
+            'outlookConnected',
+            'leadCategories',
+            'categoryId'
+        ));
     }
 
     public function import(Request $request, LeadImportService $importService)
     {
-        $request->validate([
+        $validated = $request->validate([
             'file' => ['required', 'file', 'max:10240'],
+            'category_ids' => ['nullable', 'array'],
+            'category_ids.*' => ['uuid'],
+            'category_names' => ['nullable', 'array'],
+            'category_names.*' => ['string', 'max:100'],
         ], [
             'file.required' => 'Please choose a CSV or Excel file.',
             'file.max' => 'File size must be 10 MB or less.',
@@ -75,8 +101,15 @@ class ImportedLeadController extends Controller
             return back()->withErrors(['file' => 'Only CSV, XLSX, and XLS files are allowed.']);
         }
 
+        $user = $request->user();
+        $categoryIds = $this->resolveImportCategoryIds(
+            $user,
+            $validated['category_ids'] ?? [],
+            $validated['category_names'] ?? [],
+        );
+
         try {
-            $result = $importService->import($request->user(), $file);
+            $result = $importService->import($user, $file, $categoryIds);
         } catch (Throwable $e) {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
@@ -97,6 +130,11 @@ class ImportedLeadController extends Controller
         }
         $message .= '.';
 
+        $leadCategories = LeadCategory::query()
+            ->ownedBy($user)
+            ->orderBy('name')
+            ->get(['id', 'name', 'color']);
+
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
@@ -105,12 +143,56 @@ class ImportedLeadController extends Controller
                 'skipped' => $result['skipped'],
                 'errors' => $result['errors'],
                 'error_samples' => $result['error_samples'],
+                'categories' => $leadCategories,
             ]);
         }
 
         return redirect()
             ->route('imported-leads.index')
             ->with('success', $message);
+    }
+
+    /**
+     * Resolve owned category IDs and create any new named tags for this import.
+     *
+     * @param  list<string>  $categoryIds
+     * @param  list<string>  $categoryNames
+     * @return list<string>
+     */
+    private function resolveImportCategoryIds(User $user, array $categoryIds, array $categoryNames): array
+    {
+        $resolved = [];
+
+        if ($categoryIds !== []) {
+            $owned = LeadCategory::query()
+                ->ownedBy($user)
+                ->whereIn('id', $categoryIds)
+                ->pluck('id')
+                ->all();
+
+            $resolved = array_merge($resolved, $owned);
+        }
+
+        foreach ($categoryNames as $rawName) {
+            $name = trim((string) $rawName);
+            if ($name === '') {
+                continue;
+            }
+
+            $category = LeadCategory::query()->firstOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'name' => $name,
+                ],
+                [
+                    'color' => null,
+                ]
+            );
+
+            $resolved[] = $category->id;
+        }
+
+        return array_values(array_unique($resolved));
     }
 
     public function show(Request $request, ImportedLead $importedLead)

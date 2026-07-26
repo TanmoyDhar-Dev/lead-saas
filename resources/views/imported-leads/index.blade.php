@@ -18,30 +18,77 @@
     <div class="space-y-6" x-data="importedLeadManager()">
         <button id="import-open-btn" type="button" class="hidden" @click="openImportModal()"></button>
 
-        <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div class="relative flex-1 max-w-xl">
-                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                    <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </span>
-                <input type="text" x-model="filters.q" @input.debounce.300ms="fetchLeads()"
-                       placeholder="Search organization, contact, email, phone..."
-                       class="block w-full pl-10 pr-10 py-2 bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue">
-                <button x-show="filters.q" @click="filters.q = ''; fetchLeads()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+            <div class="flex flex-col lg:flex-row items-end gap-4">
+                <div class="flex-1 w-full">
+                    <label class="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">Search</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </span>
+                        <input type="text" x-model="filters.q" @input.debounce.300ms="fetchLeads()"
+                               placeholder="Search organization, contact, email, phone..."
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-brand-blue outline-none py-3 pl-10 pr-10 transition-all">
+                        <button type="button" x-show="filters.q" @click="filters.q = ''; fetchLeads()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="w-full lg:w-72 relative" @click.outside="closeCategoryDropdown()">
+                    <label class="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">Category</label>
+                    <div class="relative">
+                        <input type="text"
+                               x-ref="categorySearchInput"
+                               x-model="categorySearch"
+                               @focus="openCategoryDropdown()"
+                               @input="categoryDropdownOpen = true"
+                               @keydown.escape.prevent="closeCategoryDropdown()"
+                               @keydown.enter.prevent="selectFirstFilteredCategory()"
+                               placeholder="All Categories"
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-brand-blue outline-none py-3 pl-4 pr-10 transition-all"
+                               autocomplete="off">
+                        <button type="button"
+                                tabindex="-1"
+                                @click="toggleCategoryDropdown()"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                            <svg class="w-4 h-4 transition-transform" :class="categoryDropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    </div>
+
+                    <div x-show="categoryDropdownOpen"
+                         x-cloak
+                         class="absolute left-0 right-0 top-full mt-2 z-40 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+                        <div class="max-h-64 overflow-y-auto p-1.5">
+                            <button type="button"
+                                    @mousedown.prevent="selectCategory('')"
+                                    :class="!filters.category ? 'bg-blue-50 text-brand-blue' : 'text-slate-700 hover:bg-slate-50'"
+                                    class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-colors">
+                                All Categories
+                            </button>
+                            <template x-for="cat in filteredCategories" :key="'dd-'+cat.id">
+                                <button type="button"
+                                        @mousedown.prevent="selectCategory(cat.id)"
+                                        :class="filters.category === cat.id ? 'bg-blue-50 text-brand-blue' : 'text-slate-700 hover:bg-slate-50'"
+                                        class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-colors truncate"
+                                        x-text="cat.name"></button>
+                            </template>
+                            <p x-show="filteredCategories.length === 0" class="px-3 py-4 text-center text-[11px] text-slate-400 font-medium">No categories found</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-full lg:w-auto">
+                    <label class="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2 opacity-0 pointer-events-none select-none">Action</label>
+                    <button type="button"
+                            @click="openOutreachModal()"
+                            :disabled="selectedLeadIds.length === 0"
+                            :class="selectedLeadIds.length === 0 ? 'opacity-50 cursor-not-allowed bg-slate-300 text-slate-500 shadow-none' : 'bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-blue-500/20'"
+                            class="w-full lg:w-auto px-5 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap">
+                        Email Outreach (<span x-text="selectedLeadIds.length"></span>)
+                    </button>
+                </div>
             </div>
-            {{-- <button type="button" @click="openImportModal()"
-                    class="px-6 py-2 rounded-xl text-sm font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all flex items-center h-[42px]">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                Import
-            </button> --}}
-            <button type="button"
-                    @click="openOutreachModal()"
-                    :disabled="selectedLeadIds.length === 0"
-                    :class="selectedLeadIds.length === 0 ? 'opacity-50 cursor-not-allowed bg-slate-300 text-slate-500 shadow-none' : 'bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-blue-500/20'"
-                    class="px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center h-[42px]">
-                Email Outreach (<span x-text="selectedLeadIds.length"></span>)
-            </button>
         </div>
 
         @unless($outlookConnected)
@@ -93,6 +140,69 @@
                             <p class="text-[11px] text-emerald-600" x-text="fileSizeLabel"></p>
                         </div>
                         <button type="button" @click="clearFile()" class="text-emerald-600 hover:text-emerald-800 text-xs font-bold">Remove</button>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 mb-2 block">Apply tags/categories to this import batch?</label>
+                        <p class="text-[11px] text-slate-400 mb-3">Optional · every created lead in this file will get the selected tags</p>
+
+                        <div class="relative" @click.outside="importCategoryDropdownOpen = false">
+                            <div class="relative">
+                                <input type="text"
+                                       x-ref="importCategorySearchInput"
+                                       x-model="importCategorySearch"
+                                       @focus="importCategoryDropdownOpen = true"
+                                       @input="importCategoryDropdownOpen = true"
+                                       @keydown.escape.prevent="importCategoryDropdownOpen = false"
+                                       @keydown.enter.prevent="pickFirstImportCategory()"
+                                       placeholder="Type to find a category..."
+                                       class="w-full bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-brand-blue outline-none py-2.5 pl-4 pr-10 transition-all"
+                                       autocomplete="off">
+                                <button type="button"
+                                        tabindex="-1"
+                                        @click="importCategoryDropdownOpen = !importCategoryDropdownOpen; if (importCategoryDropdownOpen) $nextTick(() => $refs.importCategorySearchInput?.focus())"
+                                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                                    <svg class="w-4 h-4 transition-transform" :class="importCategoryDropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                            </div>
+
+                            <div x-show="importCategoryDropdownOpen"
+                                 x-cloak
+                                 class="absolute left-0 right-0 top-full mt-2 z-40 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+                                <div class="max-h-56 overflow-y-auto p-1.5">
+                                    <template x-for="cat in filteredImportCategories" :key="'import-dd-'+cat.id">
+                                        <button type="button"
+                                                @mousedown.prevent="addImportCategory(cat.id)"
+                                                :class="importCategoryIds.includes(cat.id) ? 'bg-blue-50 text-brand-blue' : 'text-slate-700 hover:bg-slate-50'"
+                                                class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-colors truncate"
+                                                x-text="cat.name"></button>
+                                    </template>
+                                    <button type="button"
+                                            x-show="canCreateImportCategory"
+                                            @mousedown.prevent="addImportCategoryName()"
+                                            class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-amber-700 hover:bg-amber-50 transition-colors truncate">
+                                        Create “<span x-text="importCategorySearch.trim()"></span>”
+                                    </button>
+                                    <p x-show="filteredImportCategories.length === 0 && !canCreateImportCategory"
+                                       class="px-3 py-4 text-center text-[11px] text-slate-400 font-medium">No categories found</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 mt-3" x-show="importCategoryIds.length > 0 || importCategoryNames.length > 0">
+                            <template x-for="id in importCategoryIds" :key="'sel-'+id">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-blue-50 text-brand-blue border border-blue-100">
+                                    <span x-text="categoryNameById(id)"></span>
+                                    <button type="button" @click="toggleImportCategory(id)" class="hover:text-blue-900" title="Remove">&times;</button>
+                                </span>
+                            </template>
+                            <template x-for="(name, idx) in importCategoryNames" :key="'new-cat-'+name">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-100">
+                                    <span x-text="name"></span>
+                                    <button type="button" @click="importCategoryNames.splice(idx, 1)" class="hover:text-amber-900" title="Remove">&times;</button>
+                                </span>
+                            </template>
+                        </div>
                     </div>
 
                     <p x-show="importError" class="text-sm text-red-600 font-medium" x-text="importError"></p>
@@ -336,13 +446,27 @@
         function importedLeadManager() {
             return {
                 loading: false,
-                filters: { q: @js(request('q', '')) },
+                filters: {
+                    q: @js(request('q', '')),
+                    category: @js($categoryId ?? ''),
+                },
+                categories: @json(($leadCategories ?? collect())->values()),
+                categoryDropdownOpen: false,
+                categorySearch: @js(
+                    ($categoryId ?? '') !== ''
+                        ? (($leadCategories ?? collect())->firstWhere('id', $categoryId)?->name ?? '')
+                        : ''
+                ),
                 importOpen: false,
                 dragOver: false,
                 selectedFile: null,
                 importing: false,
                 importError: null,
                 importSuccess: null,
+                importCategoryIds: [],
+                importCategoryNames: [],
+                importCategorySearch: '',
+                importCategoryDropdownOpen: false,
                 detailOpen: false,
                 detailLoading: false,
                 detailData: null,
@@ -384,6 +508,56 @@
                         const totalCheckboxes = document.querySelectorAll('.imported-lead-checkbox').length;
                         this.selectAll = totalCheckboxes > 0 && val.length === totalCheckboxes;
                     });
+                },
+
+                get selectedCategoryLabel() {
+                    if (!this.filters.category) return 'All Categories';
+                    const cat = this.categories.find(c => String(c.id) === String(this.filters.category));
+                    return cat?.name || 'All Categories';
+                },
+
+                get filteredCategories() {
+                    const q = (this.categorySearch || '').trim().toLowerCase();
+                    let list = this.categories;
+                    if (q) {
+                        list = list.filter(c => (c.name || '').toLowerCase().includes(q));
+                    }
+                    return list.slice(0, 20);
+                },
+
+                openCategoryDropdown() {
+                    this.categoryDropdownOpen = true;
+                    this.categorySearch = '';
+                    this.$nextTick(() => this.$refs.categorySearchInput?.select?.());
+                },
+
+                toggleCategoryDropdown() {
+                    if (this.categoryDropdownOpen) {
+                        this.closeCategoryDropdown();
+                    } else {
+                        this.openCategoryDropdown();
+                        this.$nextTick(() => this.$refs.categorySearchInput?.focus());
+                    }
+                },
+
+                closeCategoryDropdown() {
+                    this.categoryDropdownOpen = false;
+                    this.categorySearch = this.filters.category ? this.selectedCategoryLabel : '';
+                },
+
+                selectCategory(id) {
+                    this.filters.category = id || '';
+                    this.categoryDropdownOpen = false;
+                    this.categorySearch = id ? (this.categories.find(c => String(c.id) === String(id))?.name || '') : '';
+                    this.fetchLeads();
+                },
+
+                selectFirstFilteredCategory() {
+                    if (this.filteredCategories.length > 0) {
+                        this.selectCategory(this.filteredCategories[0].id);
+                    } else if (!(this.categorySearch || '').trim()) {
+                        this.selectCategory('');
+                    }
                 },
 
                 toggleSelectAll() {
@@ -448,11 +622,75 @@
                     this.importOpen = true;
                     this.importError = null;
                     this.importSuccess = null;
+                    this.importCategoryIds = [];
+                    this.importCategoryNames = [];
+                    this.importCategorySearch = '';
+                    this.importCategoryDropdownOpen = false;
                 },
                 closeImportModal() {
                     this.importOpen = false;
                     this.clearFile();
                     this.importError = null;
+                    this.importCategoryIds = [];
+                    this.importCategoryNames = [];
+                    this.importCategorySearch = '';
+                    this.importCategoryDropdownOpen = false;
+                },
+                get filteredImportCategories() {
+                    const q = (this.importCategorySearch || '').trim().toLowerCase();
+                    let list = this.categories;
+                    if (q) {
+                        list = list.filter(c => (c.name || '').toLowerCase().includes(q));
+                    }
+                    return list.slice(0, 20);
+                },
+                get canCreateImportCategory() {
+                    const name = (this.importCategorySearch || '').trim();
+                    if (!name) return false;
+                    const existsAsCategory = this.categories.some(c => c.name.toLowerCase() === name.toLowerCase());
+                    const existsInNew = this.importCategoryNames.some(n => n.toLowerCase() === name.toLowerCase());
+                    return !existsAsCategory && !existsInNew;
+                },
+                categoryNameById(id) {
+                    return this.categories.find(c => String(c.id) === String(id))?.name || 'Category';
+                },
+                addImportCategory(id) {
+                    if (!this.importCategoryIds.includes(id)) {
+                        this.importCategoryIds.push(id);
+                    }
+                    this.importCategorySearch = '';
+                    this.importCategoryDropdownOpen = false;
+                },
+                toggleImportCategory(id) {
+                    const idx = this.importCategoryIds.indexOf(id);
+                    if (idx === -1) {
+                        this.importCategoryIds.push(id);
+                    } else {
+                        this.importCategoryIds.splice(idx, 1);
+                    }
+                },
+                addImportCategoryName() {
+                    const name = (this.importCategorySearch || '').trim();
+                    if (!name) return;
+
+                    const existsAsCategory = this.categories.find(c => c.name.toLowerCase() === name.toLowerCase());
+                    if (existsAsCategory) {
+                        this.addImportCategory(existsAsCategory.id);
+                        return;
+                    }
+
+                    if (!this.importCategoryNames.some(n => n.toLowerCase() === name.toLowerCase())) {
+                        this.importCategoryNames.push(name);
+                    }
+                    this.importCategorySearch = '';
+                    this.importCategoryDropdownOpen = false;
+                },
+                pickFirstImportCategory() {
+                    if (this.filteredImportCategories.length > 0) {
+                        this.addImportCategory(this.filteredImportCategories[0].id);
+                    } else if (this.canCreateImportCategory) {
+                        this.addImportCategoryName();
+                    }
                 },
                 clearFile() {
                     this.selectedFile = null;
@@ -492,6 +730,8 @@
 
                     const formData = new FormData();
                     formData.append('file', this.selectedFile);
+                    this.importCategoryIds.forEach(id => formData.append('category_ids[]', id));
+                    this.importCategoryNames.forEach(name => formData.append('category_names[]', name));
 
                     try {
                         const res = await fetch(@js(route('imported-leads.import')), {
@@ -509,7 +749,14 @@
                             throw new Error(data.message || Object.values(data.errors || {}).flat()[0] || 'Import failed.');
                         }
                         this.importSuccess = data.message;
+                        if (Array.isArray(data.categories)) {
+                            this.categories = data.categories;
+                        }
                         this.clearFile();
+                        this.importCategoryIds = [];
+                        this.importCategoryNames = [];
+                        this.importCategorySearch = '';
+                        this.importCategoryDropdownOpen = false;
                         await this.fetchLeads();
                         setTimeout(() => this.closeImportModal(), 1200);
                     } catch (err) {
@@ -522,8 +769,11 @@
                 async fetchLeads() {
                     this.loading = true;
                     try {
-                        const params = new URLSearchParams(this.filters);
-                        const res = await fetch(@js(route('imported-leads.index')) + '?' + params.toString(), {
+                        const params = new URLSearchParams();
+                        if (this.filters.q) params.set('q', this.filters.q);
+                        if (this.filters.category) params.set('category', this.filters.category);
+                        const qs = params.toString();
+                        const res = await fetch(@js(route('imported-leads.index')) + (qs ? '?' + qs : ''), {
                             headers: { 'X-Requested-With': 'XMLHttpRequest' },
                             credentials: 'same-origin',
                         });
@@ -533,7 +783,7 @@
                         this.selectedLeadIds = [];
                         this.selectAll = false;
                         if (window.Alpine?.initTree) window.Alpine.initTree(el);
-                        window.history.replaceState({}, '', @js(route('imported-leads.index')) + (params.toString() ? '?' + params.toString() : ''));
+                        window.history.replaceState({}, '', @js(route('imported-leads.index')) + (qs ? '?' + qs : ''));
                     } finally {
                         this.loading = false;
                     }

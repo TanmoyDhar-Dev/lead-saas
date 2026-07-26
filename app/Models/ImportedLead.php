@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ImportedLead extends Model
@@ -48,6 +49,16 @@ class ImportedLead extends Model
     public function outreachRecipients(): HasMany
     {
         return $this->hasMany(ImportedOutreachRecipient::class);
+    }
+
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            LeadCategory::class,
+            'category_imported_lead',
+            'imported_lead_id',
+            'lead_category_id'
+        )->orderBy('name');
     }
 
     public function primaryEmail(): ?string

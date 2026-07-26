@@ -8,6 +8,7 @@
                 <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Organization</th>
                 <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Contact</th>
                 <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Emails</th>
+                <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Categories</th>
                 <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Outreach</th>
                 <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap sticky right-0 z-10 bg-slate-50/90 backdrop-blur border-l border-slate-100">Actions</th>
             </tr>
@@ -47,6 +48,21 @@
                     @endif
                 </td>
                 <td class="px-3 py-4">
+                    @php $cats = $lead->categories; @endphp
+                    @if($cats->isEmpty())
+                        <span class="text-[10px] text-slate-300">—</span>
+                    @else
+                        <div class="flex flex-wrap gap-1.5 max-w-[220px]">
+                            @foreach($cats as $cat)
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                                      style="background-color: {{ $cat->color ? $cat->color.'22' : '#f1f5f9' }}; color: {{ $cat->color ?: '#64748b' }};">                                   
+                                    {{ $cat->name }}
+                                </span>
+                            @endforeach
+                        </div>
+                    @endif
+                </td>
+                <td class="px-3 py-4">
                     @if($outreachStatus === 'sent')
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-600">Sent</span>
                     @elseif($outreachStatus === 'drafted')
@@ -79,7 +95,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="8" class="px-6 py-16 text-center">
+                <td colspan="7" class="px-6 py-16 text-center">
                     <p class="text-slate-400 text-sm font-medium">No imported leads yet. Click Import Leads to upload a CSV or Excel file.</p>
                 </td>
             </tr>

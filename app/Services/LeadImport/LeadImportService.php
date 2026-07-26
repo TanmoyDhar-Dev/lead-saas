@@ -17,12 +17,14 @@ class LeadImportService
     ) {}
 
     /**
+     * @param  list<string>  $categoryIds
      * @return array{batch: ImportBatch, created: int, skipped: int, errors: int, error_samples: list<array<string, mixed>>}
      */
-    public function import(User $user, UploadedFile $file): array
+    public function import(User $user, UploadedFile $file, array $categoryIds = []): array
     {
         $parsed = $this->parser->parse($file);
         $rows = $parsed['rows'];
+        $categoryIds = array_values(array_unique(array_filter($categoryIds)));
 
         $storedPath = $file->store('imports/'.$user->id, 'local');
 
@@ -38,6 +40,7 @@ class LeadImportService
         $skipped = 0;
         $errors = 0;
         $errorSamples = [];
+        $createdLeadIds = [];
 
         try {
             foreach ($rows as $index => $row) {
@@ -57,7 +60,7 @@ class LeadImportService
                         continue;
                     }
 
-                    DB::transaction(function () use ($user, $batch, $file, $row, &$created) {
+                    DB::transaction(function () use ($user, $batch, $file, $row, &$created, &$createdLeadIds) {
                         $lead = ImportedLead::create([
                             'user_id' => $user->id,
                             'import_batch_id' => $batch->id,
@@ -75,6 +78,7 @@ class LeadImportService
                             $this->insertPhone($lead->id, $phone, $phoneIndex === 0);
                         }
 
+                        $createdLeadIds[] = $lead->id;
                         $created++;
                     });
                 } catch (Throwable $e) {
@@ -82,6 +86,8 @@ class LeadImportService
                     $this->pushError($errorSamples, $rowNumber, $e->getMessage());
                 }
             }
+
+            $this->attachCategoriesBulk($createdLeadIds, $categoryIds);
 
             $batch->update([
                 'status' => 'completed',
@@ -114,6 +120,33 @@ class LeadImportService
             'errors' => $errors,
             'error_samples' => $errorSamples,
         ];
+    }
+
+    /**
+     * Bulk-insert pivot rows for performance on large imports.
+     *
+     * @param  list<string>  $leadIds
+     * @param  list<string>  $categoryIds
+     */
+    private function attachCategoriesBulk(array $leadIds, array $categoryIds): void
+    {
+        if ($leadIds === [] || $categoryIds === []) {
+            return;
+        }
+
+        $rows = [];
+        foreach ($leadIds as $leadId) {
+            foreach ($categoryIds as $categoryId) {
+                $rows[] = [
+                    'lead_category_id' => $categoryId,
+                    'imported_lead_id' => $leadId,
+                ];
+            }
+        }
+
+        foreach (array_chunk($rows, 500) as $chunk) {
+            DB::table('category_imported_lead')->insertOrIgnore($chunk);
+        }
     }
 
     private function insertEmail(string $leadId, string $email, bool $isPrimary): void
