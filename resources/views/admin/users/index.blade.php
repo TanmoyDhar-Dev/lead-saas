@@ -62,11 +62,22 @@
                 <p id="status-email" class="text-[10px] text-slate-400 font-bold uppercase mb-6"></p>
                 <form id="status-form" method="POST" class="space-y-4">
                     @csrf
-                    <select name="status" class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-                        <option value="Active (Paid)">Active (Paid)</option>
-                        <option value="Inactive (Revoke Access)">Inactive (Revoke Access)</option>
-                        <option value="Past Due (Payment Failed)">Past Due (Payment Failed)</option>
-                    </select>
+                    <div>
+                        <label class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Account Status (Login)</label>
+                        <select name="account_status" id="account-status-select" class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="suspended">Suspended</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Plan Access</label>
+                        <select name="status" id="plan-status-select" class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                            <option value="Active (Paid)">Active (Paid)</option>
+                            <option value="Inactive (Revoke Access)">Inactive (Revoke Access)</option>
+                            <option value="Past Due (Payment Failed)">Past Due (Payment Failed)</option>
+                        </select>
+                    </div>
                     <div class="flex flex-col gap-2 pt-2">
                         <button type="submit" class="w-full bg-slate-950 text-white py-3.5 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-indigo-600 transition-all">Update Access</button>
                         <button type="button" onclick="closeModals()" class="w-full py-2 text-slate-400 font-bold text-[10px] uppercase">Cancel</button>
@@ -181,9 +192,11 @@
             });
         }
 
-        function openStatusModal(userId, email) {
+        function openStatusModal(userId, email, accountStatus, planStatus) {
             document.getElementById('status-email').innerText = email;
             document.getElementById('status-form').action = `/admin/users/${userId}/status`;
+            document.getElementById('account-status-select').value = accountStatus || 'active';
+            document.getElementById('plan-status-select').value = planStatus || 'Active (Paid)';
             showModal('status-modal');
         }
 

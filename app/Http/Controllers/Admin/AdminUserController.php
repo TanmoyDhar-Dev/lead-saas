@@ -176,6 +176,12 @@ class AdminUserController extends Controller
                 $updateData
             );
 
+            if (! empty($validated['expiry_date'])) {
+                User::whereKey($validated['user_id'])->update([
+                    'status' => 'active',
+                ]);
+            }
+
             if ($validated['payment_status'] === 'paid') {
                 \App\Models\BillingHistory::create([
                     'user_id' => $validated['user_id'],
@@ -193,19 +199,41 @@ class AdminUserController extends Controller
 
     public function updateStatus(Request $request, User $user)
     {
+        $validated = $request->validate([
+            'account_status' => ['required', 'in:active,inactive,suspended'],
+            'status' => ['required', 'string'],
+        ]);
+
+        if ($user->id === auth()->id() && $validated['account_status'] !== 'active') {
+            return back()->with('error', 'You cannot deactivate your own account.');
+        }
+
+        if ($user->isAdmin() && $validated['account_status'] !== 'active') {
+            return back()->with('error', 'Admin accounts cannot be deactivated from Security Guard.');
+        }
+
         $statusMap = [
             'Active (Paid)' => \App\Models\UserPlan::SECURITY_ACTIVE_PAID,
             'Inactive (Revoke Access)' => \App\Models\UserPlan::SECURITY_INACTIVE_REVOKED,
             'Past Due (Payment Failed)' => \App\Models\UserPlan::SECURITY_PAST_DUE,
         ];
-        $securityStatus = $statusMap[$request->status] ?? \App\Models\UserPlan::SECURITY_ACTIVE_PAID;
-        
+
+        $securityStatus = $statusMap[$validated['status']]
+            ?? \App\Models\UserPlan::SECURITY_ACTIVE_PAID;
+
+        $user->update([
+            'status' => $validated['account_status'],
+        ]);
+
         $user->userPlan()->updateOrCreate(
             ['user_id' => $user->id],
             ['security_status' => $securityStatus]
         );
-        
-        return back()->with('success', "Status updated to {$request->status}.");
+
+        return back()->with(
+            'success',
+            "Account set to {$validated['account_status']}; plan access set to {$validated['status']}."
+        );
     }
 
     public function updateLimit(Request $request, User $user)
@@ -285,9 +313,13 @@ class AdminUserController extends Controller
                 ['user_id' => $user->id],
                 [
                     'expiry_date'     => $newExpiry,
-                    'security_status' => \App\Models\UserPlan::SECURITY_ACTIVE_PAID
+                    'security_status' => \App\Models\UserPlan::SECURITY_ACTIVE_PAID,
                 ]
             );
+
+            $user->update([
+                'status' => 'active',
+            ]);
         }
 
         return back()->with('success', "Account validity updated to " . $targetDateFormatted);
