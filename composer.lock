@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "09c8b4bf2a2ba877b859c0561323359c",
+    "content-hash": "ecb2d465105b5f3708a46e96e4384239",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -4620,6 +4620,55 @@
                 "source": "https://github.com/socialiteproviders/providers"
             },
             "time": "2024-03-15T03:02:10+00:00"
+        },
+        {
+            "name": "sweetalert2/laravel",
+            "version": "1.4.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/sweetalert2/sweetalert2-laravel.git",
+                "reference": "536b9f7b094deb595caf1832afad19dce088a5f1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/sweetalert2/sweetalert2-laravel/zipball/536b9f7b094deb595caf1832afad19dce088a5f1",
+                "reference": "536b9f7b094deb595caf1832afad19dce088a5f1",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^11.0 || ^12.0 || ^13.0"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.20",
+                "pestphp/pest": "^4.0"
+            },
+            "suggest": {
+                "inertiajs/inertia-laravel": "Required to use SweetAlert2 with Inertia.js shared flash data.",
+                "livewire/livewire": "Required to have the WithSweetAlert trait use Livewire events to show popups on Livewire updates."
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "SweetAlert2\\Laravel\\ServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "SweetAlert2\\Laravel\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Official SweetAlert2 integration for Laravel framework",
+            "support": {
+                "issues": "https://github.com/sweetalert2/sweetalert2-laravel/issues",
+                "source": "https://github.com/sweetalert2/sweetalert2-laravel/tree/1.4.3"
+            },
+            "time": "2026-07-08T10:07:24+00:00"
         },
         {
             "name": "symfony/clock",

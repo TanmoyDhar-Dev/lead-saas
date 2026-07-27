@@ -85,6 +85,13 @@
 
             {{-- Right: Actions --}}
             <div class="flex items-center space-x-3 shrink-0">
+                <button type="button"
+                        x-show="selectedLeadIds.length > 0"
+                        x-cloak
+                        @click="bulkDeleteSelected()"
+                        class="px-5 py-2 rounded-xl text-sm font-bold bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white border border-rose-100 transition-all flex items-center h-[42px]">
+                    DELETE (<span x-text="selectedLeadIds.length"></span>)
+                </button>
                 <button x-bind:disabled="selectedLeadIds.length === 0" @click="showDispatchModal = true" 
                         :class="selectedLeadIds.length === 0 ? 'opacity-50 cursor-not-allowed bg-slate-300 text-slate-500 shadow-none' : 'bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-95'" 
                         class="px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center h-[42px]">
@@ -329,6 +336,30 @@
                     } else {
                         this.selectedLeadIds = [];
                     }
+                },
+
+                async bulkDeleteSelected() {
+                    if (this.selectedLeadIds.length === 0) return;
+                    const ok = await window.confirmBulkDelete(this.selectedLeadIds.length, 'lead');
+                    if (!ok) return;
+
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = @js(route('leads.bulk-delete'));
+                    const csrf = document.createElement('input');
+                    csrf.type = 'hidden';
+                    csrf.name = '_token';
+                    csrf.value = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                    form.appendChild(csrf);
+                    this.selectedLeadIds.forEach((id) => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'lead_ids[]';
+                        input.value = id;
+                        form.appendChild(input);
+                    });
+                    document.body.appendChild(form);
+                    form.submit();
                 },
 
                 hasPendingOutreach() {

@@ -44,6 +44,7 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     Route::get('/lead-searches/create', [LeadSearchController::class, 'create'])->name('lead-searches.create');
     Route::post('/lead-searches', [LeadSearchController::class, 'store'])->name('lead-searches.store');
     Route::post('/lead-searches/dispatch', [LeadSearchController::class, 'dispatchOutreach'])->name('lead-searches.dispatch');
+    Route::post('/lead-searches/bulk-delete', [LeadSearchController::class, 'bulkDelete'])->name('lead-searches.bulk-delete');
     Route::get('/lead-searches/{leadSearch}/leads', [LeadSearchController::class, 'leads'])->name('lead-searches.leads');
     Route::get('/lead-searches/{leadSearch}/leads/{lead}/json', [LeadSearchController::class, 'leadJson'])->name('lead-searches.leads.json');
     Route::delete('/lead-searches/{leadSearch}', [LeadSearchController::class, 'destroy'])->name('lead-searches.destroy');
@@ -54,20 +55,24 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     Route::get('/templates/{id}/edit', [\App\Http\Controllers\TemplateController::class, 'edit'])->name('templates.edit');
     Route::put('/templates/{id}', [\App\Http\Controllers\TemplateController::class, 'update'])->name('templates.update');
     Route::post('/templates/{id}/default', [\App\Http\Controllers\TemplateController::class, 'setDefault'])->name('templates.default');
+    Route::post('/templates/bulk-delete', [\App\Http\Controllers\TemplateController::class, 'bulkDelete'])->name('templates.bulk-delete');
     Route::delete('/templates/{id}', [\App\Http\Controllers\TemplateController::class, 'destroy'])->name('templates.destroy');
 
     Route::get('/opened-emails', [OpenedEmailController::class, 'index'])->name('opened-emails.index');
     Route::post('/leads/dispatch', [LeadSearchController::class, 'dispatchOutreach'])->name('leads.dispatch');
 
     Route::get('/imported-leads', [ImportedLeadController::class, 'index'])->name('imported-leads.index');
+    Route::get('/imported-leads/import/template', [ImportedLeadController::class, 'downloadImportTemplate'])->name('leads.import.template.download');
     Route::post('/imported-leads/import', [ImportedLeadController::class, 'import'])->name('imported-leads.import');
     Route::post('/imported-leads/outreach', [ImportedLeadOutreachController::class, 'dispatch'])->name('imported-leads.outreach');
+    Route::post('/imported-leads/bulk-delete', [ImportedLeadController::class, 'bulkDelete'])->name('imported-leads.bulk-delete');
     Route::get('/imported-leads/{importedLead}', [ImportedLeadController::class, 'show'])->name('imported-leads.show');
     Route::put('/imported-leads/{importedLead}', [ImportedLeadController::class, 'update'])->name('imported-leads.update');
     Route::delete('/imported-leads/{importedLead}', [ImportedLeadController::class, 'destroy'])->name('imported-leads.destroy');
 
     Route::get('/billing', [\App\Http\Controllers\BillingController::class, 'index'])->name('billing.index');
     Route::get('/billing/invoice/{billingHistory}/download', [\App\Http\Controllers\BillingController::class, 'downloadInvoice'])->name('billing.invoice.download');
+    Route::post('/billing/bulk-delete', [\App\Http\Controllers\BillingController::class, 'bulkDelete'])->name('billing.bulk-delete');
     Route::delete('/billing/{billingHistory}', [\App\Http\Controllers\BillingController::class, 'destroy'])->name('billing.destroy');
 });
 
@@ -107,6 +112,7 @@ Route::middleware(['auth', 'active_user', 'admin'])->prefix('admin')->name('admi
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
     Route::get('/users/create', [AdminUserController::class, 'create'])->name('users.create');
     Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
+    Route::post('/users/bulk-delete', [AdminUserController::class, 'bulkDelete'])->name('users.bulk-delete');
     Route::get('/users/{user}/edit', [AdminUserController::class, 'edit'])->name('users.edit');
     Route::put('/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');

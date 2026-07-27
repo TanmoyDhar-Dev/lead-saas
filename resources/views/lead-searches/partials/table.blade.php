@@ -3,6 +3,9 @@
         <table class="w-full text-left border-collapse">
             <thead>
                 <tr class="bg-slate-50/50 border-b border-slate-100">
+                    <th class="px-4 py-5 w-10">
+                        <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" class="w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
+                    </th>
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date / Time</th>
                     {{-- <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Owner</th> --}}
                     <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target Location</th>
@@ -16,6 +19,9 @@
             <tbody class="divide-y divide-slate-100">
                 @forelse ($searches as $search)
                 <tr class="hover:bg-slate-50 transition-colors group">
+                    <td class="px-4 py-4" @click.stop>
+                        <input type="checkbox" value="{{ $search->id }}" x-model="selectedIds" class="search-checkbox w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
+                    </td>
                     <td class="px-6 py-4">
                         @php
                             $date = $search->started_at ?? $search->created_at ?? now();
@@ -77,15 +83,20 @@
                     </td>
 
                     <td class="px-6 py-4 text-right">
-                        <div class="flex items-center justify-end space-x-2">
-                            <a href="{{ route('lead-searches.leads', $search) }}" class="bg-brand-blue/10 hover:bg-brand-blue text-brand-blue hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-wide">
-                                View Leads
+                        <div class="flex items-center justify-end space-x-1">
+                            <a href="{{ route('lead-searches.leads', $search) }}"
+                               class="p-2 text-slate-400 hover:text-brand-blue hover:bg-blue-50 rounded-lg transition-colors"
+                               title="View Leads">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                             </a>
-                            
-                            <form action="{{ route('lead-searches.destroy', $search) }}" method="POST" onsubmit="return confirm('This will delete this extraction history and all leads collected under it. This cannot be undone.');" class="inline">
+
+                            <form action="{{ route('lead-searches.destroy', $search) }}" method="POST" class="inline"
+                                  data-swal-title="Delete this extraction?"
+                                  data-swal-confirm="This will delete this extraction history and all leads collected under it."
+                                  data-swal-confirm-text="Yes, delete">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="bg-red-50 hover:bg-red-500 text-red-500 hover:text-white p-1.5 rounded-lg transition-all" title="Delete Search & Leads">
+                                <button type="submit" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete Search & Leads">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 </button>
                             </form>

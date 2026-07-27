@@ -259,6 +259,32 @@ class LeadSearchController extends Controller
         return back()->with('success', 'Search record and associated leads deleted successfully.');
     }
 
+    public function bulkDelete(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['uuid'],
+        ]);
+
+        $user = $request->user();
+        $query = LeadSearch::query()->whereIn('id', $validated['ids']);
+
+        if (! $user->isAdmin()) {
+            $query->where('user_id', $user->id);
+        }
+
+        $searches = $query->get();
+        $deleted = 0;
+
+        foreach ($searches as $search) {
+            $search->detachLeadsForSearch();
+            $search->delete();
+            $deleted++;
+        }
+
+        return back()->with('success', "{$deleted} search record(s) deleted.");
+    }
+
     public function dispatchOutreach(Request $request, N8nEmailProcessService $n8nEmailService)
     {
         $validated = $request->validate([

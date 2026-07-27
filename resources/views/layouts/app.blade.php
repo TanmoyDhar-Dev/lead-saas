@@ -85,39 +85,6 @@
                     </div>
                 </header>
 
-                <!-- Flash Messages -->
-                @if(session('success'))
-                <div class="mx-6 lg:mx-8 mt-4">
-                    <div class="bg-emerald-50 border border-emerald-100 text-emerald-700 px-5 py-3 rounded-2xl text-sm font-medium flex items-center" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)" x-transition>
-                        <svg class="w-5 h-5 mr-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
-                        {{ session('success') }}
-                    </div>
-                </div>
-                @endif
-                @if(session('error'))
-                <div class="mx-6 lg:mx-8 mt-4">
-                    <div class="bg-red-50 border border-red-100 text-red-700 px-5 py-3 rounded-2xl text-sm font-medium flex items-center" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 8000)" x-transition>
-                        <svg class="w-5 h-5 mr-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
-                        {{ session('error') }}
-                    </div>
-                </div>
-                @endif
-                @if($errors->any())
-                <div class="mx-6 lg:mx-8 mt-4">
-                    <div class="bg-red-50 border border-red-100 text-red-700 px-5 py-4 rounded-2xl text-sm font-medium flex flex-col gap-1" x-data="{ show: true }" x-show="show" x-transition>
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 mr-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
-                            <span>There were some errors with your request:</span>
-                        </div>
-                        <ul class="list-disc pl-11 mt-1 text-xs space-y-1">
-                            @foreach($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                </div>
-                @endif
-
                 <!-- Page Content -->
                 <main class="flex-1 bg-[#f8fafc] overflow-y-auto no-scrollbar">
                     <div class="max-w-7xl mx-auto pl-4 lg:pl-8 xl:pl-10 pr-4 lg:pr-6 py-6 lg:py-8">
@@ -129,6 +96,18 @@
         @auth
             @include('layouts.partials.integrations-modal')
         @endauth
+        @include('sweetalert2::index')
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                if (typeof window.bootLeadflowToasts === 'function') {
+                    window.bootLeadflowToasts({
+                        success: @js(session('success')),
+                        error: @js(session('error')),
+                        errors: @js($errors->any() ? $errors->all() : []),
+                    });
+                }
+            });
+        </script>
         @stack('scripts')
     </body>
 </html>

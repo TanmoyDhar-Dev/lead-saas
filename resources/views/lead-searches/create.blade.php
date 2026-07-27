@@ -41,17 +41,6 @@
             </div>
         @endif
 
-        {{-- Success / Error Feedback --}}
-        <div x-show="successMessage" x-transition x-cloak class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start">
-            <svg class="w-5 h-5 text-emerald-500 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <p class="text-sm text-emerald-800 font-medium" x-text="successMessage"></p>
-        </div>
-
-        <div x-show="errorMessage" x-transition x-cloak class="bg-red-50 border border-red-200 p-4 rounded-2xl flex items-start">
-            <svg class="w-5 h-5 text-red-500 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <p class="text-sm text-red-800 font-medium" x-text="errorMessage"></p>
-        </div>
-
         {{-- Search Form --}}
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative">
             
@@ -226,27 +215,29 @@
                         
                         if (response.ok) {
                             this.successMessage = result.message || 'Lead Hunter started successfully!';
+                            window.toast?.success(this.successMessage);
                             
-                            // Show success for 1.5 seconds, then redirect
+                            // Show success briefly, then redirect
                             setTimeout(() => {
                                 if (result.redirect) {
                                     window.location.href = result.redirect;
                                 }
-                            }, 1500);
+                            }, 1200);
                         } else {
                             this.isSubmitting = false;
                             if (response.status === 422 && result.errors) {
-                                // Validation error
                                 this.errorMessage = Object.values(result.errors).flat().join(' ');
                             } else {
                                 this.errorMessage = result.error || 'An error occurred during submission.';
                             }
+                            window.toast?.error(this.errorMessage);
                         }
                     })
                     .catch(error => {
                         clearInterval(this.statusInterval);
                         this.isSubmitting = false;
                         this.errorMessage = 'A network error occurred. Please try again later.';
+                        window.toast?.error(this.errorMessage);
                     });
                 }
             }

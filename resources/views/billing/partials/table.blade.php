@@ -3,6 +3,9 @@
         <thead class="bg-slate-50/50 sticky top-0 z-10 backdrop-blur-md">
             <tr class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">
                 @if(auth()->user()->is_admin)
+                <th class="px-4 py-5 border-b border-slate-100 w-10">
+                    <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
+                </th>
                 <th class="px-8 py-5 border-b border-slate-100">User</th>
                 @endif
                 <th class="px-6 py-5 border-b border-slate-100">Date</th>
@@ -18,6 +21,9 @@
             @forelse($payments as $p)
             <tr class="group hover:bg-slate-50/50 transition-all">
                 @if(auth()->user()->is_admin)
+                <td class="px-4 py-4">
+                    <input type="checkbox" value="{{ $p->id }}" x-model="selectedIds" class="billing-checkbox w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
+                </td>
                 <td class="px-8 py-4">
                     <div class="font-bold text-slate-900 text-sm tracking-tight leading-none mb-1">{{ $p->user?->name ?? 'Deleted User' }}</div>
                     <div class="text-[10px] text-slate-400 font-medium lowercase tracking-tight">{{ $p->user?->email ?? '—' }}</div>
@@ -64,17 +70,16 @@
 
                 <td class="px-8 py-4 text-right">
                     <div class="flex items-center justify-end gap-4">
-                        {{-- Download Link (Visible to All) --}}
                         <a href="{{ route('billing.invoice.download', $p->id) }}"
                             class="text-indigo-600 hover:text-indigo-900 text-xs font-black uppercase tracking-widest">
                             Download
                         </a>
 
-                        {{-- Delete Action (Strictly Admin Only) --}}
                         @if(auth()->user()->is_admin)
-                        <form action="{{ route('billing.destroy', $p->id) }}" method="POST"
-                            onsubmit="return confirm('ADMIN: Are you sure you want to delete this record? This cannot be undone.');"
-                            class="inline">
+                        <form action="{{ route('billing.destroy', $p->id) }}" method="POST" class="inline"
+                              data-swal-title="Delete billing record?"
+                              data-swal-confirm="This billing record will be permanently removed."
+                              data-swal-confirm-text="Yes, delete">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="text-rose-400 hover:text-rose-600 transition-colors p-1 rounded-md hover:bg-rose-50" title="Delete Record">
@@ -90,7 +95,7 @@
             </tr>
             @empty
             <tr>
-                <td class="px-8 py-10 text-center text-slate-400 font-bold" colspan="{{ auth()->user()->is_admin ? 7 : 6 }}">
+                <td class="px-8 py-10 text-center text-slate-400 font-bold" colspan="{{ auth()->user()->is_admin ? 8 : 6 }}">
                     No billing history found.
                 </td>
             </tr>

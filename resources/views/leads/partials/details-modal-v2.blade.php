@@ -116,7 +116,10 @@
                     </template>
                     
                     @if(Auth::user()->isAdmin())
-                    <form :action="'/leads/' + modalLeadId" method="POST" onsubmit="return confirm('Delete this lead permanently?');">
+                    <form :action="'/leads/' + modalLeadId" method="POST"
+                          data-swal-title="Delete this lead?"
+                          data-swal-confirm="This lead will be permanently removed."
+                          data-swal-confirm-text="Yes, delete">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="bg-red-50 text-red-500 border border-red-100 px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all uppercase tracking-wide">

@@ -115,6 +115,7 @@ document.addEventListener('alpine:init', () => {
             } catch (err) {
                 if (!silent) {
                     this.errorMessage = err.message || 'Failed to refresh status.';
+                    window.toast?.error(this.errorMessage);
                 }
             } finally {
                 if (!silent) {
@@ -146,6 +147,7 @@ document.addEventListener('alpine:init', () => {
             if (!this.oauthPopup) {
                 this.connecting = false;
                 this.errorMessage = 'Popup blocked. Allow popups for this site and try again.';
+                window.toast?.error(this.errorMessage);
                 return;
             }
 
@@ -193,19 +195,21 @@ document.addEventListener('alpine:init', () => {
                 this.oauthHandled = true;
                 if (message) {
                     this.successMessage = message;
+                    window.toast?.success(message);
                 }
                 this.microsoftConnected = true;
                 this.syncMicrosoftItem();
                 await this.refreshStatus({ silent: true });
                 setTimeout(() => {
                     this.closeModal();
-                }, 2000);
+                }, 1200);
                 return;
             }
 
             if (success === false) {
                 this.oauthHandled = true;
                 this.errorMessage = message || 'Microsoft sign-in failed.';
+                window.toast?.error(this.errorMessage);
                 this.syncMicrosoftItem();
                 return;
             }
@@ -214,10 +218,11 @@ document.addEventListener('alpine:init', () => {
             if (this.microsoftConnected) {
                 this.oauthHandled = true;
                 this.successMessage = 'Outlook connected successfully.';
+                window.toast?.success(this.successMessage);
                 this.syncMicrosoftItem();
                 setTimeout(() => {
                     this.closeModal();
-                }, 2000);
+                }, 1200);
             }
         },
 
@@ -232,7 +237,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         async disconnectMicrosoft() {
-            if (!confirm('Disconnect Microsoft Outlook?')) {
+            const confirmed = window.confirmDelete
+                ? await window.confirmDelete({
+                    title: 'Disconnect Outlook?',
+                    text: 'Microsoft Outlook will be disconnected from this account.',
+                    confirmText: 'Yes, disconnect',
+                })
+                : window.confirm('Disconnect Microsoft Outlook?');
+            if (!confirmed) {
                 return;
             }
             this.connecting = true;
@@ -254,8 +266,10 @@ document.addEventListener('alpine:init', () => {
                 this.microsoftEmail = null;
                 this.syncMicrosoftItem();
                 this.successMessage = 'Outlook disconnected.';
+                window.toast?.success(this.successMessage);
             } catch (err) {
                 this.errorMessage = err.message || 'Could not disconnect.';
+                window.toast?.error(this.errorMessage);
             } finally {
                 this.connecting = false;
             }

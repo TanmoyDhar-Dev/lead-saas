@@ -2,6 +2,9 @@
     <table class="w-full text-left border-separate border-spacing-0">
         <thead class="bg-slate-50/50 sticky top-0 z-10 backdrop-blur-md">
             <tr class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">
+                <th class="px-4 py-5 border-b border-slate-100 w-10">
+                    <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
+                </th>
                 <th class="px-8 py-5 border-b border-slate-100">Operator</th>
                 <th class="px-6 py-5 border-b border-slate-100 text-center">Security</th>
                 <th class="px-6 py-5 border-b border-slate-100">Quotas</th>
@@ -12,6 +15,11 @@
         <tbody class="divide-y divide-slate-50">
             @forelse($users as $user)
             <tr class="group hover:bg-slate-50/50 transition-all">
+                <td class="px-4 py-4">
+                    @if(!$user->is_admin)
+                    <input type="checkbox" value="{{ $user->id }}" x-model="selectedIds" class="user-checkbox w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
+                    @endif
+                </td>
                 <td class="px-8 py-4">
                     <div class="flex items-center gap-3">
                         <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center font-black text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all uppercase text-[10px] border border-slate-200">
@@ -93,7 +101,7 @@
                             <button type="button" onclick="openStatusModal('{{ $user->id }}', '{{ $user->email }}', '{{ $user->status }}', '{{ e($user->subscription_status) }}')" class="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white px-3 py-1.5 rounded-lg transition-all">Security</button>
                             <button type="button" onclick="openLimitModal('{{ $user->id }}', '{{ $user->name }}', '{{ $user->query_limit }}', '{{ $user->profile_limit }}')" class="text-[9px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 hover:bg-amber-600 hover:text-white px-3 py-1.5 rounded-lg transition-all">Limits</button>
                             <button type="button" onclick="openPaymentModal('{{ $user->id }}', '{{ $user->email }}')" class="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-lg transition-all">Billing</button>
-                            <button type="button" onclick="openDeleteModal('{{ $user->id }}', '{{ $user->email }}')" class="text-[9px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500 hover:text-white px-3 py-1.5 rounded-lg transition-all">Delete</button>
+                            <button type="button" onclick="confirmUserDelete('{{ $user->id }}', '{{ $user->email }}')" class="text-[9px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500 hover:text-white px-3 py-1.5 rounded-lg transition-all">Delete</button>
                         @else
                             <span class="text-[8px] font-black text-slate-200 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">Root Protected</span>
                         @endif
@@ -102,7 +110,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="5" class="px-8 py-10 text-center text-slate-400 font-bold">
+                <td colspan="6" class="px-8 py-10 text-center text-slate-400 font-bold">
                     No users found.
                 </td>
             </tr>

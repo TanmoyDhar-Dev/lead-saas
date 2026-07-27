@@ -94,4 +94,20 @@ class BillingController extends Controller
 
         return back()->with('success', "Billing record successfully removed from system.");
     }
+
+    public function bulkDelete(Request $request): RedirectResponse
+    {
+        if (! auth()->user()->is_admin) {
+            abort(403, 'Unauthorized. Only administrators can remove billing records.');
+        }
+
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['uuid'],
+        ]);
+
+        $deleted = BillingHistory::query()->whereIn('id', $validated['ids'])->delete();
+
+        return back()->with('success', "{$deleted} billing record(s) deleted.");
+    }
 }

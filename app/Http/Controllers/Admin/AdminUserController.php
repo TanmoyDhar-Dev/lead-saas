@@ -130,6 +130,45 @@ class AdminUserController extends Controller
         }
     }
 
+    public function bulkDelete(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $users = User::query()
+            ->whereIn('id', $validated['ids'])
+            ->where('role', '!=', 'admin')
+            ->get();
+
+        $deleted = 0;
+        $suspended = 0;
+
+        foreach ($users as $user) {
+            try {
+                $user->delete();
+                $deleted++;
+            } catch (\Exception $e) {
+                $user->update(['status' => 'suspended']);
+                $suspended++;
+            }
+        }
+
+        $parts = [];
+        if ($deleted > 0) {
+            $parts[] = "{$deleted} deleted";
+        }
+        if ($suspended > 0) {
+            $parts[] = "{$suspended} suspended (had related records)";
+        }
+
+        return back()->with(
+            'success',
+            $parts === [] ? 'No users were deleted.' : 'Users: '.implode(', ', $parts).'.'
+        );
+    }
+
     public function toggleStatus(User $user)
     {
         if ($user->isAdmin()) {

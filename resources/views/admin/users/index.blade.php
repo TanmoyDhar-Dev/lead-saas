@@ -36,6 +36,13 @@
                     </select>
                 </div>
                 <div class="flex gap-2 w-full md:w-auto">
+                    <button type="button"
+                            x-show="selectedIds.length > 0"
+                            x-cloak
+                            @click="bulkDeleteSelected()"
+                            class="flex-1 md:flex-none bg-rose-50 border border-rose-100 text-rose-600 font-black py-3 px-6 rounded-xl text-[10px] uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-colors text-center">
+                        Delete (<span x-text="selectedIds.length"></span>)
+                    </button>
                     <button @click="resetFilters()" class="flex-1 md:flex-none bg-white border border-slate-200 text-slate-600 font-black py-3 px-6 rounded-xl text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-colors text-center">
                         Reset
                     </button>
@@ -213,10 +220,29 @@
             showModal('payment-modal');
         }
 
-        function openDeleteModal(userId, email) {
-            document.getElementById('delete-email').innerText = email;
-            document.getElementById('delete-form').action = `/admin/users/${userId}`;
-            showModal('delete-modal');
+        async function confirmUserDelete(userId, email) {
+            const ok = await window.confirmDelete({
+                title: 'Delete this user?',
+                text: `${email} will be permanently removed. Related records may cause the account to be suspended instead.`,
+                confirmText: 'Yes, delete',
+            });
+            if (!ok) return;
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/users/${userId}`;
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = '_token';
+            csrf.value = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            form.appendChild(csrf);
+            const method = document.createElement('input');
+            method.type = 'hidden';
+            method.name = '_method';
+            method.value = 'DELETE';
+            form.appendChild(method);
+            document.body.appendChild(form);
+            form.submit();
         }
 
         backdrop.addEventListener('click', (e) => {
@@ -228,6 +254,8 @@
         function userManagement() {
             return {
                 tableLoading: false,
+                selectedIds: [],
+                selectAll: false,
                 filters: {
                     search: '{{ request('search') }}',
                     role: '{{ request('role') }}',
@@ -235,7 +263,11 @@
                 },
 
                 init() {
-                    // Handle pagination clicks via AJAX
+                    this.$watch('selectedIds', (val) => {
+                        const total = document.querySelectorAll('.user-checkbox').length;
+                        this.selectAll = total > 0 && val.length === total;
+                    });
+
                     document.addEventListener('click', (e) => {
                         const link = e.target.closest('.ajax-pagination a');
                         if (link) {
@@ -245,8 +277,42 @@
                     });
                 },
 
+                toggleSelectAll() {
+                    if (this.selectAll) {
+                        this.selectedIds = Array.from(document.querySelectorAll('.user-checkbox')).map(cb => cb.value);
+                    } else {
+                        this.selectedIds = [];
+                    }
+                },
+
+                async bulkDeleteSelected() {
+                    if (this.selectedIds.length === 0) return;
+                    const ok = await window.confirmBulkDelete(this.selectedIds.length, 'user');
+                    if (!ok) return;
+
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = @js(route('admin.users.bulk-delete'));
+                    const csrf = document.createElement('input');
+                    csrf.type = 'hidden';
+                    csrf.name = '_token';
+                    csrf.value = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                    form.appendChild(csrf);
+                    this.selectedIds.forEach((id) => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'ids[]';
+                        input.value = id;
+                        form.appendChild(input);
+                    });
+                    document.body.appendChild(form);
+                    form.submit();
+                },
+
                 async fetchUsers(url = null) {
                     this.tableLoading = true;
+                    this.selectedIds = [];
+                    this.selectAll = false;
                     try {
                         const baseUrl = url || window.location.pathname;
                         const params = new URLSearchParams(this.filters);
@@ -266,7 +332,6 @@
                                 window.Alpine.initTree(tableBody);
                             }
 
-                            // Update browser URL without refresh
                             if (!url) {
                                 window.history.pushState({}, '', targetUrl);
                             } else {

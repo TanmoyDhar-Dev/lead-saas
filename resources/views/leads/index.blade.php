@@ -25,29 +25,6 @@
         @endphp
 
         {{-- ===== RUN HUNTER PANEL ===== --}}
-        
-        {{-- Session Flash Messages --}}
-        @if(session('success'))
-            <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start">
-                <svg class="w-5 h-5 text-emerald-500 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                <p class="text-sm text-emerald-800 font-bold">{{ session('success') }}</p>
-            </div>
-        @endif
-        @if(session('error') || $errors->any())
-            <div class="bg-red-50 border border-red-200 p-4 rounded-2xl flex items-start">
-                <svg class="w-5 h-5 text-red-500 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                <div>
-                    <p class="text-sm text-red-800 font-bold">{{ session('error') ?? 'Please fix the errors below.' }}</p>
-                    @if($errors->any())
-                        <ul class="text-xs text-red-700 mt-1 list-disc list-inside">
-                            @foreach($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    @endif
-                </div>
-            </div>
-        @endif
 
         <div class="bg-navy-900 rounded-3xl p-3 shadow-xl" x-data="{ expanded: false, volume: 10, volumeInvalid: false }">
             <form action="{{ route('lead-searches.store') }}" method="POST">
@@ -158,6 +135,16 @@
                 <button @click="resetFilters()" class="text-[10px] font-bold text-slate-400 hover:text-brand-blue uppercase tracking-widest transition-colors">
                     Reset
                 </button>
+
+                @if(Auth::user()->isAdmin())
+                <button type="button"
+                        x-show="selectedIds.length > 0"
+                        x-cloak
+                        @click="bulkDeleteSelected()"
+                        class="px-5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white border border-rose-100 transition-all">
+                    Delete (<span x-text="selectedIds.length"></span>)
+                </button>
+                @endif
             </div>
         </div>
 
@@ -236,7 +223,10 @@
                                 </a>
                             </template>
                             @if(Auth::user()->isAdmin())
-                            <form :action="'/leads/' + modalData?.id" method="POST" @click.stop onsubmit="return confirm('Delete this lead permanently?');">
+                            <form :action="'/leads/' + modalData?.id" method="POST" @click.stop
+                                  data-swal-title="Delete this lead?"
+                                  data-swal-confirm="This lead will be permanently removed."
+                                  data-swal-confirm-text="Yes, delete">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-xl text-xs font-bold transition-colors">
@@ -258,6 +248,8 @@
                 modalLoading: false,
                 modalData: null,
                 tableLoading: false,
+                selectedIds: [],
+                selectAll: false,
                 filters: {
                     q: '{{ request('q') }}',
                     user_id: '{{ request('user_id') }}',
@@ -265,7 +257,11 @@
                 },
 
                 init() {
-                    // Handle pagination clicks via AJAX
+                    this.$watch('selectedIds', (val) => {
+                        const total = document.querySelectorAll('.lead-row-checkbox').length;
+                        this.selectAll = total > 0 && val.length === total;
+                    });
+
                     document.addEventListener('click', (e) => {
                         const link = e.target.closest('.ajax-pagination a');
                         if (link) {
@@ -275,14 +271,45 @@
                     });
                 },
 
+                toggleSelectAll() {
+                    if (this.selectAll) {
+                        this.selectedIds = Array.from(document.querySelectorAll('.lead-row-checkbox')).map(cb => cb.value);
+                    } else {
+                        this.selectedIds = [];
+                    }
+                },
+
+                async bulkDeleteSelected() {
+                    if (this.selectedIds.length === 0) return;
+                    const ok = await window.confirmBulkDelete(this.selectedIds.length, 'lead');
+                    if (!ok) return;
+
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = @js(route('leads.bulk-delete'));
+                    const csrf = document.createElement('input');
+                    csrf.type = 'hidden';
+                    csrf.name = '_token';
+                    csrf.value = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                    form.appendChild(csrf);
+                    this.selectedIds.forEach((id) => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'lead_ids[]';
+                        input.value = id;
+                        form.appendChild(input);
+                    });
+                    document.body.appendChild(form);
+                    form.submit();
+                },
+
                 async fetchLeads(url = null) {
                     this.tableLoading = true;
+                    this.selectedIds = [];
+                    this.selectAll = false;
                     try {
                         const baseUrl = url || window.location.pathname;
                         const params = new URLSearchParams(this.filters);
-                        
-                        // If it's a pagination URL, it already has params, so we merge them if needed
-                        // But usually, pagination links have all current params in them if we use withQueryString()
                         const targetUrl = url ? url : `${baseUrl}?${params.toString()}`;
 
                         const response = await fetch(targetUrl, {
@@ -292,9 +319,13 @@
                         });
                         if (response.ok) {
                             const html = await response.text();
-                            document.getElementById('leads-table-container').innerHTML = html;
-                            
-                            // Update browser URL without refresh
+                            const container = document.getElementById('leads-table-container');
+                            container.innerHTML = html;
+
+                            if (window.Alpine && typeof window.Alpine.initTree === 'function') {
+                                window.Alpine.initTree(container);
+                            }
+
                             if (!url) {
                                 window.history.pushState({}, '', targetUrl);
                             } else {

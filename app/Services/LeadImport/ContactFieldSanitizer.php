@@ -5,30 +5,50 @@ namespace App\Services\LeadImport;
 class ContactFieldSanitizer
 {
     /**
-     * @return list<string>
+     * @return array{emails: list<string>, invalid: list<string>}
      */
-    public function extractEmails(?string $raw): array
+    public function extractEmailsDetailed(?string $raw): array
     {
         if ($raw === null || trim($raw) === '') {
-            return [];
+            return ['emails' => [], 'invalid' => []];
         }
 
         $normalized = str_replace(["\r\n", "\r"], "\n", $raw);
         $parts = preg_split('/[\s,;|\/]+/u', $normalized) ?: [];
 
         $emails = [];
+        $invalid = [];
+
         foreach ($parts as $part) {
             $email = strtolower(trim($part, " \t\n\r\0\x0B\"'<>"));
             $email = rtrim($email, '.,;');
+            // Strip common invisible / zero-width characters
+            $email = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}\x{00A0}]/u', '', $email) ?? $email;
 
-            if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            if ($email === '') {
+                continue;
+            }
+
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $invalid[$email] = $email;
                 continue;
             }
 
             $emails[$email] = $email;
         }
 
-        return array_values($emails);
+        return [
+            'emails' => array_values($emails),
+            'invalid' => array_values($invalid),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function extractEmails(?string $raw): array
+    {
+        return $this->extractEmailsDetailed($raw)['emails'];
     }
 
     /**

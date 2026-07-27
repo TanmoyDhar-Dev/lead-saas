@@ -78,13 +78,19 @@
                     </div>
                 </div>
 
-                <div class="w-full lg:w-auto">
-                    <label class="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2 opacity-0 pointer-events-none select-none">Action</label>
+                <div class="w-full lg:w-auto flex items-end gap-2">
+                    <button type="button"
+                            x-show="selectedLeadIds.length > 0"
+                            x-cloak
+                            @click="bulkDeleteSelected()"
+                            class="px-5 py-3 rounded-xl text-sm font-bold bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white border border-rose-100 transition-all whitespace-nowrap">
+                        Delete (<span x-text="selectedLeadIds.length"></span>)
+                    </button>
                     <button type="button"
                             @click="openOutreachModal()"
                             :disabled="selectedLeadIds.length === 0"
                             :class="selectedLeadIds.length === 0 ? 'opacity-50 cursor-not-allowed bg-slate-300 text-slate-500 shadow-none' : 'bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-blue-500/20'"
-                            class="w-full lg:w-auto px-5 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap">
+                            class="px-5 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap">
                         Email Outreach (<span x-text="selectedLeadIds.length"></span>)
                     </button>
                 </div>
@@ -131,7 +137,17 @@
                         <svg class="mx-auto h-10 w-10 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
                         <p class="text-sm font-bold text-slate-700">Drag & drop your file here</p>
                         <p class="text-xs text-slate-400 mt-1">or click to select from your device</p>
-                        <p class="text-[10px] text-slate-400 mt-3 uppercase tracking-widest font-bold">Expected: Organization, MD/CEO, Email, Cell/Phone, Address</p>
+                        <p class="text-[10px] text-slate-400 mt-3 uppercase tracking-widest font-bold">Expected: Organization Name, MD/CEO, Email, Cell/Phone, Address</p>
+                    </div>
+
+                    <div class="flex items-center justify-center -mt-1">
+                        <a href="{{ route('leads.import.template.download') }}"
+                           download
+                           class="inline-flex items-center gap-1.5 text-xs font-bold text-brand-blue hover:text-blue-700 hover:underline"
+                           @click.stop>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Download sample template
+                        </a>
                     </div>
 
                     <div x-show="selectedFile" class="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 flex items-center justify-between">
@@ -204,9 +220,6 @@
                             </template>
                         </div>
                     </div>
-
-                    <p x-show="importError" class="text-sm text-red-600 font-medium" x-text="importError"></p>
-                    <p x-show="importSuccess" class="text-sm text-emerald-600 font-medium" x-text="importSuccess"></p>
 
                     <div class="flex justify-end gap-3 pt-2">
                         <button type="button" @click="closeImportModal()" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100">Cancel</button>
@@ -428,7 +441,6 @@
                             </template>
                             <p x-show="editForm.phones.length === 0" class="text-xs text-slate-400">No phones. Click + Add phone.</p>
                         </div>
-                        <p x-show="editError" class="text-sm text-red-600 font-medium" x-text="editError"></p>
                     </div>
                     <div class="p-4 border-t border-slate-100 flex justify-end gap-3 shrink-0">
                         <button type="button" @click="editOpen = false" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100">Cancel</button>
@@ -461,8 +473,6 @@
                 dragOver: false,
                 selectedFile: null,
                 importing: false,
-                importError: null,
-                importSuccess: null,
                 importCategoryIds: [],
                 importCategoryNames: [],
                 importCategorySearch: '',
@@ -472,7 +482,6 @@
                 detailData: null,
                 editOpen: false,
                 editSaving: false,
-                editError: null,
                 editId: null,
                 editForm: {
                     organization_name: '',
@@ -560,6 +569,33 @@
                     }
                 },
 
+                async bulkDeleteSelected() {
+                    if (this.selectedLeadIds.length === 0) return;
+                    const ok = await window.confirmBulkDelete(this.selectedLeadIds.length, 'imported lead');
+                    if (!ok) return;
+
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = @js(route('imported-leads.bulk-delete'));
+
+                    const csrf = document.createElement('input');
+                    csrf.type = 'hidden';
+                    csrf.name = '_token';
+                    csrf.value = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                    form.appendChild(csrf);
+
+                    this.selectedLeadIds.forEach((id) => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'ids[]';
+                        input.value = id;
+                        form.appendChild(input);
+                    });
+
+                    document.body.appendChild(form);
+                    form.submit();
+                },
+
                 toggleSelectAll() {
                     if (this.selectAll) {
                         const checkboxes = document.querySelectorAll('.imported-lead-checkbox');
@@ -580,7 +616,7 @@
                 openOutreachModal() {
                     if (this.selectedLeadIds.length === 0) return;
                     if (!this.outlookConnected) {
-                        alert('Connect Microsoft Outlook first under Integrations.');
+                        window.toast?.warning('Connect Microsoft Outlook first under Integrations.');
                         return;
                     }
                     this.outreachFiles = [];
@@ -620,8 +656,6 @@
 
                 openImportModal() {
                     this.importOpen = true;
-                    this.importError = null;
-                    this.importSuccess = null;
                     this.importCategoryIds = [];
                     this.importCategoryNames = [];
                     this.importCategorySearch = '';
@@ -630,7 +664,6 @@
                 closeImportModal() {
                     this.importOpen = false;
                     this.clearFile();
-                    this.importError = null;
                     this.importCategoryIds = [];
                     this.importCategoryNames = [];
                     this.importCategorySearch = '';
@@ -706,17 +739,15 @@
                     this.setFile(file);
                 },
                 setFile(file) {
-                    this.importError = null;
-                    this.importSuccess = null;
                     if (!file) return;
                     const name = file.name.toLowerCase();
                     if (!(/\.(csv|xlsx|xls)$/.test(name))) {
-                        this.importError = 'Only CSV, XLSX, and XLS files are allowed.';
+                        window.toast?.error('Only CSV, XLSX, and XLS files are allowed.');
                         this.clearFile();
                         return;
                     }
                     if (file.size > 10 * 1024 * 1024) {
-                        this.importError = 'File size must be 10 MB or less.';
+                        window.toast?.error('File size must be 10 MB or less.');
                         this.clearFile();
                         return;
                     }
@@ -725,8 +756,6 @@
                 async submitImport() {
                     if (!this.selectedFile || this.importing) return;
                     this.importing = true;
-                    this.importError = null;
-                    this.importSuccess = null;
 
                     const formData = new FormData();
                     formData.append('file', this.selectedFile);
@@ -748,7 +777,16 @@
                         if (!res.ok || !data.success) {
                             throw new Error(data.message || Object.values(data.errors || {}).flat()[0] || 'Import failed.');
                         }
-                        this.importSuccess = data.message;
+
+                        window.toast?.success(data.message || 'Import complete.');
+                        if (Array.isArray(data.error_samples) && data.error_samples.length > 0) {
+                            window.toast?.importErrors(data.error_samples, {
+                                title: data.skipped > 0
+                                    ? `Import issues (${data.skipped} skipped)`
+                                    : 'Import error report',
+                            });
+                        }
+
                         if (Array.isArray(data.categories)) {
                             this.categories = data.categories;
                         }
@@ -758,9 +796,9 @@
                         this.importCategorySearch = '';
                         this.importCategoryDropdownOpen = false;
                         await this.fetchLeads();
-                        setTimeout(() => this.closeImportModal(), 1200);
+                        this.closeImportModal();
                     } catch (err) {
-                        this.importError = err.message || 'Import failed.';
+                        window.toast?.error(err.message || 'Import failed.');
                     } finally {
                         this.importing = false;
                     }
@@ -802,7 +840,7 @@
                         this.detailData = await res.json();
                     } catch {
                         this.detailOpen = false;
-                        alert('Unable to load lead details.');
+                        window.toast?.error('Unable to load lead details.');
                     } finally {
                         this.detailLoading = false;
                     }
@@ -810,7 +848,6 @@
 
                 async openEdit(id) {
                     this.editOpen = true;
-                    this.editError = null;
                     this.editId = id;
                     this.editSaving = false;
                     try {
@@ -830,14 +867,13 @@
                         if (!this.editForm.emails.length) this.editForm.emails = [''];
                     } catch {
                         this.editOpen = false;
-                        alert('Unable to load lead for editing.');
+                        window.toast?.error('Unable to load lead for editing.');
                     }
                 },
 
                 async submitEdit() {
                     if (this.editSaving || !this.editId) return;
                     this.editSaving = true;
-                    this.editError = null;
 
                     const payload = {
                         organization_name: this.editForm.organization_name,
@@ -865,9 +901,10 @@
                             throw new Error(msg);
                         }
                         this.editOpen = false;
+                        window.toast?.success(data.message || 'Imported lead updated.');
                         await this.fetchLeads();
                     } catch (err) {
-                        this.editError = err.message || 'Update failed.';
+                        window.toast?.error(err.message || 'Update failed.');
                     } finally {
                         this.editSaving = false;
                     }

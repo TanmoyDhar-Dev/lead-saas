@@ -38,9 +38,6 @@
             </div>
 
             <div x-show="!$store.integrations.loading">
-                <div x-show="$store.integrations.errorMessage" class="mb-4 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700" x-text="$store.integrations.errorMessage"></div>
-                <div x-show="$store.integrations.successMessage" class="mb-4 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700" x-text="$store.integrations.successMessage"></div>
-
                 <div x-show="$store.integrations.microsoftConnected" class="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 mb-4">
                     <div class="flex items-center gap-2 text-emerald-700 font-semibold text-sm mb-1">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>

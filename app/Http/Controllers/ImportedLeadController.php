@@ -8,10 +8,41 @@ use App\Models\User;
 use App\Services\LeadImport\LeadImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
 class ImportedLeadController extends Controller
 {
+    /**
+     * Fixed basename for the demo import template (no user-controlled path segments).
+     */
+    private const IMPORT_TEMPLATE_BASENAME = 'import_leads_template.csv';
+
+    public function downloadImportTemplate(): BinaryFileResponse
+    {
+        $directory = storage_path('app/templates');
+        $path = $directory.DIRECTORY_SEPARATOR.self::IMPORT_TEMPLATE_BASENAME;
+
+        // Resolve + realpath to block traversal / symlink escapes outside the templates dir.
+        $realDirectory = realpath($directory);
+        $realPath = realpath($path);
+
+        if ($realDirectory === false || $realPath === false || ! is_file($realPath)) {
+            abort(404, 'Import template is not available.');
+        }
+
+        $prefix = $realDirectory.DIRECTORY_SEPARATOR;
+        if (! str_starts_with($realPath, $prefix)) {
+            abort(404, 'Import template is not available.');
+        }
+
+        return response()->download(
+            $realPath,
+            self::IMPORT_TEMPLATE_BASENAME,
+            ['Content-Type' => 'text/csv; charset=UTF-8']
+        );
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -315,5 +346,21 @@ class ImportedLeadController extends Controller
         return redirect()
             ->route('imported-leads.index')
             ->with('success', 'Imported lead deleted.');
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['uuid'],
+        ]);
+
+        $user = $request->user();
+
+        $deleted = ImportedLead::visibleTo($user)
+            ->whereIn('id', $validated['ids'])
+            ->delete();
+
+        return back()->with('success', "{$deleted} imported lead(s) deleted.");
     }
 }

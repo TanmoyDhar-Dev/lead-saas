@@ -131,4 +131,23 @@ class TemplateController extends Controller
 
         return back()->with('success', 'Template deleted successfully.');
     }
+
+    public function bulkDelete(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $user = $request->user();
+        $query = EmailTemplate::query()->whereIn('id', $validated['ids']);
+
+        if (! $user->isAdmin()) {
+            $query->where('user_id', $user->id)->where('is_system_sample', 'false');
+        }
+
+        $deleted = $query->delete();
+
+        return back()->with('success', "{$deleted} template(s) deleted.");
+    }
 }

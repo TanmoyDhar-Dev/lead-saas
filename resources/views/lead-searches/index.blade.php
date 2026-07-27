@@ -38,6 +38,14 @@
                         </div>
                     @endif
 
+                    <button type="button"
+                            x-show="selectedIds.length > 0"
+                            x-cloak
+                            @click="bulkDeleteSelected()"
+                            class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white border border-rose-100 transition-all">
+                        Delete (<span x-text="selectedIds.length"></span>)
+                    </button>
+
                     {{-- Reset Button --}}
                     <button @click="resetFilters()"
                         class="text-xs font-bold text-slate-400 hover:text-brand-blue transition-colors flex items-center px-2 py-2 shrink-0">
@@ -65,6 +73,8 @@
                 return {
                     loading: false,
                     pollInterval: null,
+                    selectedIds: [],
+                    selectAll: false,
                     filters: {
                         q: '',
                         status: '',
@@ -73,6 +83,40 @@
                     },
                     init() {
                         this.startPolling();
+                        this.$watch('selectedIds', (val) => {
+                            const total = document.querySelectorAll('.search-checkbox').length;
+                            this.selectAll = total > 0 && val.length === total;
+                        });
+                    },
+                    toggleSelectAll() {
+                        if (this.selectAll) {
+                            this.selectedIds = Array.from(document.querySelectorAll('.search-checkbox')).map(cb => cb.value);
+                        } else {
+                            this.selectedIds = [];
+                        }
+                    },
+                    async bulkDeleteSelected() {
+                        if (this.selectedIds.length === 0) return;
+                        const ok = await window.confirmBulkDelete(this.selectedIds.length, 'search record');
+                        if (!ok) return;
+
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = @js(route('lead-searches.bulk-delete'));
+                        const csrf = document.createElement('input');
+                        csrf.type = 'hidden';
+                        csrf.name = '_token';
+                        csrf.value = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                        form.appendChild(csrf);
+                        this.selectedIds.forEach((id) => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'ids[]';
+                            input.value = id;
+                            form.appendChild(input);
+                        });
+                        document.body.appendChild(form);
+                        form.submit();
                     },
                     startPolling() {
                         this.pollInterval = setInterval(() => {
@@ -92,7 +136,11 @@
                         })
                             .then(r => r.text())
                             .then(html => {
-                                document.getElementById('history-container').innerHTML = html;
+                                const el = document.getElementById('history-container');
+                                el.innerHTML = html;
+                                this.selectedIds = [];
+                                this.selectAll = false;
+                                if (window.Alpine?.initTree) window.Alpine.initTree(el);
                                 this.loading = false;
 
                                 // Smart Polling Logic: Stop polling if no searches are currently "Processing"

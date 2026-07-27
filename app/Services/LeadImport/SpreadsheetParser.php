@@ -127,7 +127,7 @@ class SpreadsheetParser
     /**
      * @param  array<int, mixed>  $row
      * @param  array{organization_name: int|null, contact_name: int|null, emails: int|null, phones: int|null, address: int|null}  $map
-     * @return array{organization_name: ?string, contact_name: ?string, emails: list<string>, phones: list<string>, address: ?string}
+     * @return array{organization_name: ?string, contact_name: ?string, emails: list<string>, invalid_emails: list<string>, phones: list<string>, address: ?string}
      */
     private function mapRow(array $row, array $map): array
     {
@@ -144,10 +144,13 @@ class SpreadsheetParser
             return is_scalar($value) ? (string) $value : null;
         };
 
+        $emailResult = $this->sanitizer->extractEmailsDetailed($get($map['emails']));
+
         return [
             'organization_name' => $this->sanitizer->cleanText($get($map['organization_name'])),
             'contact_name' => $this->sanitizer->cleanText($get($map['contact_name'])),
-            'emails' => $this->sanitizer->extractEmails($get($map['emails'])),
+            'emails' => $emailResult['emails'],
+            'invalid_emails' => $emailResult['invalid'],
             'phones' => $this->sanitizer->extractPhones($get($map['phones'])),
             'address' => $this->sanitizer->cleanText($get($map['address'])),
         ];

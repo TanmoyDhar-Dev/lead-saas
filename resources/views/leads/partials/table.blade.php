@@ -2,6 +2,11 @@
     <table class="w-full text-left border-collapse">
         <thead>
             <tr class="bg-slate-50/50 border-b border-slate-100">
+                @if(Auth::user()->isAdmin())
+                <th class="px-4 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-10">
+                    <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" class="w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
+                </th>
+                @endif
                 <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Name</th>
                 <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Position / Company</th>
                 <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Location</th>
@@ -16,6 +21,11 @@
         <tbody class="divide-y divide-slate-100">
             @forelse($leads as $lead)
             <tr class="hover:bg-slate-50 transition-colors group cursor-pointer" @click="openModal('{{ $lead->id }}')">
+                @if(Auth::user()->isAdmin())
+                <td class="px-4 py-4" @click.stop>
+                    <input type="checkbox" value="{{ $lead->id }}" x-model="selectedIds" class="lead-row-checkbox w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
+                </td>
+                @endif
                 <td class="px-6 py-4">
                     <div class="flex items-center">
                         <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-sm mr-3 group-hover:bg-brand-blue group-hover:text-white transition-all shrink-0">
@@ -63,7 +73,10 @@
                 </td>
                 @if(Auth::user()->isAdmin())
                 <td class="px-6 py-4 text-center">
-                    <form action="{{ route('leads.destroy', $lead) }}" method="POST" @click.stop onsubmit="return confirm('Delete this lead permanently?');" class="inline">
+                    <form action="{{ route('leads.destroy', $lead) }}" method="POST" @click.stop class="inline"
+                          data-swal-title="Delete this lead?"
+                          data-swal-confirm="This lead will be permanently removed."
+                          data-swal-confirm-text="Yes, delete">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg transition-all" title="Delete Lead">
@@ -75,7 +88,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="{{ Auth::user()->isAdmin() ? '7' : '6' }}" class="px-6 py-16 text-center">
+                <td colspan="{{ Auth::user()->isAdmin() ? '8' : '6' }}" class="px-6 py-16 text-center">
                     <div class="text-slate-300 mb-3">
                         <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"></path></svg>
                     </div>

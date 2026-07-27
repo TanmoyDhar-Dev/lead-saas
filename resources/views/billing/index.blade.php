@@ -29,6 +29,13 @@
             {{-- Admin filters --}}
             @if(auth()->user()->is_admin)
             <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                <button type="button"
+                        x-show="selectedIds.length > 0"
+                        x-cloak
+                        @click="bulkDeleteSelected()"
+                        class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white border border-rose-100 transition-all">
+                    Delete (<span x-text="selectedIds.length"></span>)
+                </button>
                 <select x-model="filters.user_id" class="flex-1 sm:flex-none bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none py-2.5 px-4 transition-all">
                     <option value="">All users</option>
                     @foreach($users as $u)
@@ -128,17 +135,21 @@
                 status: '{{ request('status', '') }}'
             },
             loading: false,
+            selectedIds: [],
+            selectAll: false,
             totalRevenue: '${{ number_format($totalRevenue, 2) }}',
             paidCount: '{{ $paidCount }}',
             lastPaid: '{{ $lastPaid ? $lastPaid->created_at->format('M d, Y') : '—' }}',
             lastPaidSub: '{{ $lastPaid ? '$' . number_format($lastPaid->amount, 2) . ' • ' . $lastPaid->gateway : '' }}',
             
             init() {
-                // Watch for changes in filters and trigger fetch
                 this.$watch('filters.user_id', () => this.fetchBilling());
                 this.$watch('filters.status', () => this.fetchBilling());
-                
-                // Listen to pagination clicks inside table-container
+                this.$watch('selectedIds', (val) => {
+                    const total = document.querySelectorAll('.billing-checkbox').length;
+                    this.selectAll = total > 0 && val.length === total;
+                });
+
                 document.addEventListener('click', (e) => {
                     const link = e.target.closest('.ajax-pagination a');
                     if (link) {
@@ -147,15 +158,47 @@
                     }
                 });
             },
+
+            toggleSelectAll() {
+                if (this.selectAll) {
+                    this.selectedIds = Array.from(document.querySelectorAll('.billing-checkbox')).map(cb => cb.value);
+                } else {
+                    this.selectedIds = [];
+                }
+            },
+
+            async bulkDeleteSelected() {
+                if (this.selectedIds.length === 0) return;
+                const ok = await window.confirmBulkDelete(this.selectedIds.length, 'billing record');
+                if (!ok) return;
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = @js(route('billing.bulk-delete'));
+                const csrf = document.createElement('input');
+                csrf.type = 'hidden';
+                csrf.name = '_token';
+                csrf.value = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                form.appendChild(csrf);
+                this.selectedIds.forEach((id) => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'ids[]';
+                    input.value = id;
+                    form.appendChild(input);
+                });
+                document.body.appendChild(form);
+                form.submit();
+            },
             
             fetchBilling(url = null) {
                 this.loading = true;
+                this.selectedIds = [];
+                this.selectAll = false;
                 
-                // Build URL
                 let fetchUrl = url || '{{ route('billing.index') }}';
                 let parsedUrl = new URL(fetchUrl);
                 
-                // If not calling a specific pagination URL, set query params from filters
                 if (!url) {
                     if (this.filters.user_id) {
                         parsedUrl.searchParams.set('user_id', this.filters.user_id);
@@ -170,7 +213,6 @@
                     }
                 }
                 
-                // Perform Fetch
                 fetch(parsedUrl.toString(), {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
@@ -178,16 +220,17 @@
                 })
                 .then(res => res.json())
                 .then(data => {
-                    // Update table html
-                    document.getElementById('table-container').innerHTML = data.table;
+                    const container = document.getElementById('table-container');
+                    container.innerHTML = data.table;
+                    if (window.Alpine && typeof window.Alpine.initTree === 'function') {
+                        window.Alpine.initTree(container);
+                    }
                     
-                    // Update stats
                     this.totalRevenue = data.totalRevenue;
                     this.paidCount = data.paidCount;
                     this.lastPaid = data.lastPaid;
                     this.lastPaidSub = data.lastPaidSub;
                     
-                    // Update browser URL query params without reloading page
                     window.history.pushState({}, '', parsedUrl.toString());
                 })
                 .catch(err => {

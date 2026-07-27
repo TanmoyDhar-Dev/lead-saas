@@ -47,17 +47,35 @@ class LeadImportService
                 $rowNumber = $index + 2; // header is row 1
 
                 try {
-                    if (($row['organization_name'] ?? null) === null
-                        && ($row['contact_name'] ?? null) === null) {
+                    if (($row['organization_name'] ?? null) === null) {
                         $skipped++;
-                        $this->pushError($errorSamples, $rowNumber, 'Missing organization and contact name.');
+                        $this->pushError($errorSamples, $rowNumber, 'Missing organization name.');
+                        continue;
+                    }
+
+                    if (($row['contact_name'] ?? null) === null) {
+                        $skipped++;
+                        $this->pushError($errorSamples, $rowNumber, 'Missing contact name (MD/CEO).');
                         continue;
                     }
 
                     if (($row['emails'] ?? []) === []) {
                         $skipped++;
-                        $this->pushError($errorSamples, $rowNumber, 'No valid email address found.');
+                        $invalid = $row['invalid_emails'] ?? [];
+                        $detail = $invalid === []
+                            ? 'No valid email address found.'
+                            : 'No valid email address found. Invalid: '.implode(', ', array_slice($invalid, 0, 5));
+                        $this->pushError($errorSamples, $rowNumber, $detail);
                         continue;
+                    }
+
+                    if (($row['invalid_emails'] ?? []) !== []) {
+                        $invalid = array_slice($row['invalid_emails'], 0, 5);
+                        $this->pushError(
+                            $errorSamples,
+                            $rowNumber,
+                            'Imported with valid email(s); ignored invalid: '.implode(', ', $invalid)
+                        );
                     }
 
                     DB::transaction(function () use ($user, $batch, $file, $row, &$created, &$createdLeadIds) {
