@@ -140,14 +140,17 @@
                         <p class="text-[10px] text-slate-400 mt-3 uppercase tracking-widest font-bold">Expected: Organization Name, MD/CEO, Email, Cell/Phone, Address</p>
                     </div>
 
-                    <div class="flex items-center justify-center -mt-1">
-                        <a href="{{ route('leads.import.template.download') }}"
+                    <div class="flex items-center justify-center gap-1 -mt-1 text-xs text-slate-500 font-medium">
+                        <span>Download sample file:</span>
+                        <a href="{{ route('leads.import.template.download', ['format' => 'csv']) }}"
                            download
-                           class="inline-flex items-center gap-1.5 text-xs font-bold text-brand-blue hover:text-blue-700 hover:underline"
-                           @click.stop>
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Download sample template
-                        </a>
+                           class="font-bold text-brand-blue hover:text-blue-700 hover:underline"
+                           @click.stop>CSV</a>
+                        <span class="text-slate-300">/</span>
+                        <a href="{{ route('leads.import.template.download', ['format' => 'xlsx']) }}"
+                           download
+                           class="font-bold text-brand-blue hover:text-blue-700 hover:underline"
+                           @click.stop>Excel</a>
                     </div>
 
                     <div x-show="selectedFile" class="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 flex items-center justify-between">

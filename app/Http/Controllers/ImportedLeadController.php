@@ -14,14 +14,33 @@ use Throwable;
 class ImportedLeadController extends Controller
 {
     /**
-     * Fixed basename for the demo import template (no user-controlled path segments).
+     * Allowed demo import templates (fixed basenames — no user-controlled paths).
+     *
+     * @var array<string, array{file: string, mime: string}>
      */
-    private const IMPORT_TEMPLATE_BASENAME = 'import_leads_template.csv';
+    private const IMPORT_TEMPLATES = [
+        'csv' => [
+            'file' => 'import_leads_template.csv',
+            'mime' => 'text/csv; charset=UTF-8',
+        ],
+        'xlsx' => [
+            'file' => 'import_leads_template.xlsx',
+            'mime' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ],
+    ];
 
-    public function downloadImportTemplate(): BinaryFileResponse
+    public function downloadImportTemplate(Request $request): BinaryFileResponse
     {
+        $format = strtolower((string) $request->query('format', 'csv'));
+
+        if (! array_key_exists($format, self::IMPORT_TEMPLATES)) {
+            abort(404, 'Import template is not available.');
+        }
+
+        $basename = self::IMPORT_TEMPLATES[$format]['file'];
+        $mime = self::IMPORT_TEMPLATES[$format]['mime'];
         $directory = storage_path('app/templates');
-        $path = $directory.DIRECTORY_SEPARATOR.self::IMPORT_TEMPLATE_BASENAME;
+        $path = $directory.DIRECTORY_SEPARATOR.$basename;
 
         // Resolve + realpath to block traversal / symlink escapes outside the templates dir.
         $realDirectory = realpath($directory);
@@ -36,11 +55,7 @@ class ImportedLeadController extends Controller
             abort(404, 'Import template is not available.');
         }
 
-        return response()->download(
-            $realPath,
-            self::IMPORT_TEMPLATE_BASENAME,
-            ['Content-Type' => 'text/csv; charset=UTF-8']
-        );
+        return response()->download($realPath, $basename, ['Content-Type' => $mime]);
     }
 
     public function index(Request $request)
