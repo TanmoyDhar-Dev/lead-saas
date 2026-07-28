@@ -61,16 +61,54 @@
                 @csrf
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {{-- Target Location --}}
+                    {{-- Target Location (searchable, must match locations.json) --}}
                     <div class="space-y-1 col-span-1 md:col-span-2">
                         <label for="target_location" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Target Location *</label>
-                        <select name="target_location" id="target_location" x-model="formData.target_location" required
-                               class="w-full bg-slate-50 border-slate-200 rounded-2xl text-sm focus:ring-brand-blue focus:border-brand-blue py-3 px-4 transition-all uppercase">
-                            <option value="" disabled selected>SELECT A TARGET LOCATION...</option>
-                            <template x-for="loc in locations" :key="loc">
-                                <option :value="loc" x-text="loc.toUpperCase()"></option>
-                            </template>
-                        </select>
+                        <div class="relative" @click.outside="locationDropdownOpen = false">
+                            <input type="hidden" name="target_location" :value="formData.target_location" required>
+                            <div class="relative">
+                                <input type="text"
+                                       id="target_location"
+                                       x-ref="locationSearchInput"
+                                       x-model="locationSearch"
+                                       @focus="locationDropdownOpen = true"
+                                       @input="onLocationSearchInput()"
+                                       @keydown.escape.prevent="locationDropdownOpen = false"
+                                       @keydown.enter.prevent="pickFirstFilteredLocation()"
+                                       @keydown.arrow-down.prevent="highlightNextLocation()"
+                                       @keydown.arrow-up.prevent="highlightPrevLocation()"
+                                       placeholder="Type to search a location..."
+                                       autocomplete="off"
+                                       :class="locationInvalid ? 'border-red-500 ring-1 ring-red-100' : 'border-slate-200 focus:ring-brand-blue focus:border-brand-blue'"
+                                       class="w-full bg-slate-50 rounded-2xl text-sm py-3 pl-4 pr-10 transition-all">
+                                <button type="button"
+                                        tabindex="-1"
+                                        @click="locationDropdownOpen = !locationDropdownOpen; if (locationDropdownOpen) $nextTick(() => $refs.locationSearchInput?.focus())"
+                                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                                    <svg class="w-4 h-4 transition-transform" :class="locationDropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                            </div>
+
+                            <div x-show="locationDropdownOpen"
+                                 x-cloak
+                                 class="absolute left-0 right-0 top-full mt-2 z-40 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+                                <div class="max-h-64 overflow-y-auto p-1.5">
+                                    <template x-for="(loc, idx) in filteredLocations" :key="loc">
+                                        <button type="button"
+                                                @mousedown.prevent="selectLocation(loc)"
+                                                :class="(formData.target_location === loc || highlightedLocationIndex === idx) ? 'bg-blue-50 text-brand-blue' : 'text-slate-700 hover:bg-slate-50'"
+                                                class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-colors truncate uppercase"
+                                                x-text="loc"></button>
+                                    </template>
+                                    <p x-show="filteredLocations.length === 0" class="px-3 py-4 text-center text-[11px] text-slate-400 font-medium">
+                                        No matching locations
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <p x-show="locationInvalid" class="text-red-500 text-[10px] font-bold mt-1 px-1" x-cloak>
+                            Select a location from the list only.
+                        </p>
                     </div>
 
                     {{-- Industry --}}
@@ -122,8 +160,8 @@
                         </button>
                     @else
                         <button type="submit" 
-                                :disabled="volumeInvalid || isSubmitting"
-                                :class="volumeInvalid || isSubmitting ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-brand-blue hover:bg-blue-600 shadow-blue-500/20'"
+                                :disabled="volumeInvalid || isSubmitting || !formData.target_location || locationInvalid"
+                                :class="volumeInvalid || isSubmitting || !formData.target_location || locationInvalid ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-brand-blue hover:bg-blue-600 shadow-blue-500/20'"
                                 class="text-white font-bold py-3 px-8 rounded-2xl transition-all transform active:scale-95 shadow-lg flex items-center">
                             <svg x-show="!isSubmitting" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                             <svg x-show="isSubmitting" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -148,6 +186,10 @@
                 successMessage: '',
                 errorMessage: '',
                 locations: [],
+                locationSearch: '',
+                locationDropdownOpen: false,
+                locationInvalid: false,
+                highlightedLocationIndex: 0,
                 formData: {
                     target_location: '',
                     industry: '',
@@ -158,39 +200,98 @@
                     return this.statusMessages[this.statusIndex];
                 },
 
+                get filteredLocations() {
+                    const q = (this.locationSearch || '').trim().toLowerCase();
+                    let list = this.locations;
+                    if (q) {
+                        list = list.filter(loc => String(loc).toLowerCase().includes(q));
+                    }
+                    return list.slice(0, 20);
+                },
+
                 init() {
-                    // Initialize validity
                     this.$watch('volume', value => {
                         this.volumeInvalid = (value < 1 || value > 100 || !value);
                     });
-                    
-                    // Fetch locations list
+
                     fetch('/locations.json')
                         .then(r => r.json())
                         .then(d => {
-                            this.locations = d;
+                            this.locations = Array.isArray(d) ? d : [];
                         })
-                        .catch(e => console.error("Error loading locations", e));
+                        .catch(e => console.error('Error loading locations', e));
+                },
+
+                onLocationSearchInput() {
+                    this.locationDropdownOpen = true;
+                    this.highlightedLocationIndex = 0;
+                    const q = (this.locationSearch || '').trim().toLowerCase();
+                    const exact = this.locations.find(loc => String(loc).toLowerCase() === q);
+                    if (exact) {
+                        this.formData.target_location = exact;
+                        this.locationInvalid = false;
+                    } else {
+                        this.formData.target_location = '';
+                        this.locationInvalid = q !== '';
+                    }
+                },
+
+                selectLocation(loc) {
+                    this.formData.target_location = loc;
+                    this.locationSearch = loc;
+                    this.locationInvalid = false;
+                    this.locationDropdownOpen = false;
+                    this.highlightedLocationIndex = 0;
+                },
+
+                pickFirstFilteredLocation() {
+                    const list = this.filteredLocations;
+                    if (!list.length) {
+                        this.locationInvalid = true;
+                        this.formData.target_location = '';
+                        return;
+                    }
+                    const idx = Math.min(Math.max(this.highlightedLocationIndex, 0), list.length - 1);
+                    this.selectLocation(list[idx]);
+                },
+
+                highlightNextLocation() {
+                    this.locationDropdownOpen = true;
+                    const max = this.filteredLocations.length - 1;
+                    if (max < 0) return;
+                    this.highlightedLocationIndex = Math.min(this.highlightedLocationIndex + 1, max);
+                },
+
+                highlightPrevLocation() {
+                    this.locationDropdownOpen = true;
+                    this.highlightedLocationIndex = Math.max(this.highlightedLocationIndex - 1, 0);
                 },
 
                 submitForm(event) {
                     if (this.volumeInvalid || this.isSubmitting) return;
+
+                    const selected = (this.formData.target_location || '').trim().toLowerCase();
+                    const isValidLocation = this.locations.some(loc => String(loc).toLowerCase() === selected);
+                    if (!selected || !isValidLocation) {
+                        this.locationInvalid = true;
+                        this.locationDropdownOpen = true;
+                        window.toast?.error('Please select a valid target location from the list.');
+                        return;
+                    }
 
                     this.isSubmitting = true;
                     this.successMessage = '';
                     this.errorMessage = '';
                     this.statusIndex = 0;
 
-                    // Rotate messages
                     this.statusInterval = setInterval(() => {
                         this.statusIndex = (this.statusIndex + 1) % this.statusMessages.length;
                     }, 1200);
 
                     const formElement = event.target;
                     const data = new FormData(formElement);
-                    
-                    // Final lowercasing enforcement before sending
-                    data.set('target_location', (data.get('target_location') || '').toLowerCase().trim());
+
+                    data.set('target_location', this.formData.target_location.toLowerCase().trim());
                     data.set('industry', (data.get('industry') || '').toLowerCase().trim());
                     data.set('position', (data.get('position') || '').toLowerCase().trim());
                     data.set('volume', this.volume);
@@ -205,19 +306,18 @@
                     })
                     .then(async response => {
                         clearInterval(this.statusInterval);
-                        
+
                         let result;
                         try {
                             result = await response.json();
                         } catch (e) {
                             throw new Error('Invalid JSON response from server');
                         }
-                        
+
                         if (response.ok) {
                             this.successMessage = result.message || 'Lead Hunter started successfully!';
                             window.toast?.success(this.successMessage);
-                            
-                            // Show success briefly, then redirect
+
                             setTimeout(() => {
                                 if (result.redirect) {
                                     window.location.href = result.redirect;
