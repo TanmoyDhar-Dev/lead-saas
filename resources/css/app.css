@@ -14,6 +14,27 @@
     scrollbar-width: none;
 }
 
+/* Sticky table columns — stay inside the table scroller, never above page header */
+.lf-table-scroll {
+    position: relative;
+    isolation: isolate;
+    overflow-x: auto;
+    max-width: 100%;
+}
+.lf-sticky-left {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+}
+.lf-sticky-right {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+}
+.lf-sticky-head {
+    z-index: 3;
+}
+
 /* Custom scrollbar for sidebar */
 .overflow-y-auto::-webkit-scrollbar {
     width: 4px;

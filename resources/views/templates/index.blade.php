@@ -36,16 +36,16 @@
         </div>
 
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="p-0 overflow-x-auto">
+            <div class="p-0 lf-table-scroll no-scrollbar">
                 <table class="min-w-full w-full table-auto text-left border-collapse">
                     <thead>
-                        <tr class="bg-slate-50/50 border-b border-slate-100">
+                        <tr class="bg-slate-50 border-b border-slate-100">
                             <th class="px-4 py-5 w-10">
                                 <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" class="w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
                             </th>
                             <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Template Name</th>
                             <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Subject</th>
-                            <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap sticky right-0 z-10 bg-slate-50/90 backdrop-blur border-l border-slate-100">Actions</th>
+                            <th class="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap lf-sticky-right lf-sticky-head bg-slate-50 border-l border-slate-100">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -68,7 +68,7 @@
                             <td class="px-6 py-4">
                                 <div class="text-sm font-medium text-slate-600">{{ $template->subject }}</div>
                             </td>
-                            <td class="px-6 py-4 text-right sticky right-0 z-10 bg-white group-hover:bg-slate-50 border-l border-slate-100">
+                            <td class="px-6 py-4 text-right lf-sticky-right bg-white group-hover:bg-slate-50 border-l border-slate-100">
                                 <div class="flex items-center justify-end space-x-1">
                                     <button type="button" @click="openModal({{ json_encode($template) }})"
                                             class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"

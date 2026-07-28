@@ -6,11 +6,11 @@
 <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden"
      data-total-count="{{ $leads->total() }}"
      data-has-pending-outreach="{{ $hasPendingOutreach ? '1' : '0' }}">
-    <div class="p-0 overflow-x-auto">
+    <div class="p-0 lf-table-scroll no-scrollbar">
         <table class="min-w-full w-full table-auto text-left border-collapse">
             <thead>
-                <tr class="bg-slate-50/50 border-b border-slate-100">
-                    <th class="px-4 py-5 sticky left-0 z-10 bg-slate-50/90 backdrop-blur border-b border-r border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-10">
+                <tr class="bg-slate-50 border-b border-slate-100">
+                    <th class="px-4 py-5 lf-sticky-left lf-sticky-head bg-slate-50 border-b border-r border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-10">
                         <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" class="w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
                     </th>
                     <th class="px-4 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Full Name</th>
@@ -18,13 +18,13 @@
                     <th class="px-4 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Position</th>
                     <th class="px-4 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">LinkedIn</th>
                     <th class="px-4 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Outreach Status</th>
-                    <th class="px-4 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap sticky right-0 z-10 bg-slate-50/90 backdrop-blur border-b border-l border-slate-100">Actions</th>
+                    <th class="px-4 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap lf-sticky-right lf-sticky-head bg-slate-50 border-b border-l border-slate-100">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($leads as $lead)
                 <tr class="hover:bg-slate-50 transition-colors group cursor-pointer" @click="openModal('{{ $lead->id }}')">
-                    <td class="px-4 py-4 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-100" @click.stop>
+                    <td class="px-4 py-4 lf-sticky-left bg-white group-hover:bg-slate-50 border-r border-slate-100" @click.stop>
                         <input type="checkbox" value="{{ $lead->id }}" x-model="selectedLeadIds" class="lead-checkbox w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
                     </td>
                     <td class="px-4 py-4 min-w-[200px]">
@@ -53,7 +53,7 @@
                         @include('leads.partials.outreach-status-badge', ['lead' => $lead])
                     </td>
                     
-                    <td class="px-4 py-4 text-right sticky right-0 z-10 bg-white group-hover:bg-slate-50 border-l border-slate-100" @click.stop>
+                    <td class="px-4 py-4 text-right lf-sticky-right bg-white group-hover:bg-slate-50 border-l border-slate-100" @click.stop>
                         <div class="flex items-center justify-end space-x-2">
                             <button type="button" data-preview-lead-id="{{ $lead->id }}" @click.stop="openPreview('{{ $lead->id }}', {{ json_encode($lead->campaignRecipients->first()?->subject ?? 'No Subject') }}, {{ json_encode($lead->campaignRecipients->first()?->hyper_personalized_line ?? 'No personalization generated.') }}, {{ json_encode($lead->campaignRecipients->first()?->final_email_body ?? 'No email drafted yet.') }})"
                                     class="text-slate-400 hover:text-brand-blue p-2 rounded-lg hover:bg-brand-blue/5 transition-all" title="Email Preview">

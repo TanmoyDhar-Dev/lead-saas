@@ -30,26 +30,26 @@
             @include('layouts.sidebar')
 
             <!-- Main Content -->
-            <div class="flex-1 flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-300">
+            <div class="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden transition-all duration-300">
 
-                <!-- Top Header -->
-                <header class="bg-white border-b border-slate-200 h-16 px-6 lg:px-8 sticky top-0 z-10 flex justify-between items-center">
-                    <div class="flex items-center">
+                <!-- Top Header (outside scroll so table sticky columns never cover it) -->
+                <header class="bg-white border-b border-slate-200 h-16 px-6 lg:px-8 shrink-0 z-30 relative flex justify-between items-center">
+                    <div class="flex items-center min-w-0">
                         <!-- Mobile hamburger -->
                         <button @click="sidebarOpen = true" class="lg:hidden mr-4 text-slate-500 hover:text-slate-700 focus:outline-none">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                         </button>
-                        <div>
-                            <h2 class="text-xl font-bold text-slate-800">
+                        <div class="min-w-0">
+                            <h2 class="text-xl font-bold text-slate-800 truncate">
                                 {{ $header ?? 'Dashboard' }}
                             </h2>
                             @if(isset($subheader))
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{{ $subheader }}</p>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate">{{ $subheader }}</p>
                             @endif
                         </div>
                     </div>
 
-                    <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-3 shrink-0">
                         @if(isset($actions))
                             {{ $actions }}
                         @endif
@@ -71,7 +71,7 @@
                                  x-transition:leave="transition ease-in duration-100"
                                  x-transition:leave-start="opacity-100 scale-100"
                                  x-transition:leave-end="opacity-0 scale-95"
-                                 class="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-20">
+                                 class="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-40">
                                 <div class="px-4 py-3 border-b border-slate-100">
                                     <p class="text-sm font-bold text-slate-800">{{ auth()->user()->name }}</p>
                                     <p class="text-[10px] text-slate-400 truncate">{{ auth()->user()->email }}</p>
@@ -86,7 +86,7 @@
                 </header>
 
                 <!-- Page Content -->
-                <main class="flex-1 bg-[#f8fafc] overflow-y-auto no-scrollbar">
+                <main class="flex-1 min-h-0 bg-[#f8fafc] overflow-y-auto overflow-x-hidden no-scrollbar">
                     <div class="max-w-7xl mx-auto pl-4 lg:pl-8 xl:pl-10 pr-4 lg:pr-6 py-6 lg:py-8">
                         {{ $slot }}
                     </div>

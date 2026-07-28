@@ -1,8 +1,8 @@
-<div class="p-0 overflow-x-auto no-scrollbar">
+<div class="p-0 lf-table-scroll no-scrollbar">
     <table class="w-full text-left border-collapse min-w-[1100px]">
         <thead>
-            <tr class="bg-slate-50/50 border-b border-slate-100">
-                <th class="px-3 py-5 sticky left-0 z-10 bg-slate-50/90 backdrop-blur border-b border-r border-slate-100 w-10">
+            <tr class="bg-slate-50 border-b border-slate-100">
+                <th class="px-3 py-5 lf-sticky-left lf-sticky-head bg-slate-50 border-b border-r border-slate-100 w-10">
                     <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" class="w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
                 </th>
                 <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Organization</th>
@@ -10,7 +10,7 @@
                 <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Emails</th>
                 <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Categories</th>
                 <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Outreach</th>
-                <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap sticky right-0 z-10 bg-slate-50/90 backdrop-blur border-l border-slate-100">Actions</th>
+                <th class="px-3 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap lf-sticky-right lf-sticky-head bg-slate-50 border-l border-slate-100">Actions</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
@@ -19,7 +19,7 @@
                 $outreachStatus = $lead->outreachRecipients->first()?->status;
             @endphp
             <tr class="hover:bg-slate-50 transition-colors group">
-                <td class="px-3 py-4 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-100" @click.stop>
+                <td class="px-3 py-4 lf-sticky-left bg-white group-hover:bg-slate-50 border-r border-slate-100" @click.stop>
                     <input type="checkbox"
                            value="{{ $lead->id }}"
                            data-org="{{ e($lead->organization_name ?: '—') }}"
@@ -75,7 +75,7 @@
                         <span class="text-[10px] text-slate-300">—</span>
                     @endif
                 </td>
-                <td class="px-3 py-4 text-right sticky right-0 z-10 bg-white group-hover:bg-slate-50 border-l border-slate-100">
+                <td class="px-3 py-4 text-right lf-sticky-right bg-white group-hover:bg-slate-50 border-l border-slate-100">
                     <div class="flex items-center justify-end space-x-1">
                         <button type="button" @click="openDetail('{{ $lead->id }}')" class="p-2 text-slate-400 hover:text-brand-blue transition-colors" title="View">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
