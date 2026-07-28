@@ -80,7 +80,7 @@
                                        placeholder="Type to search a location..."
                                        autocomplete="off"
                                        :class="locationInvalid ? 'border-red-500 ring-1 ring-red-100' : 'border-slate-200 focus:ring-brand-blue focus:border-brand-blue'"
-                                       class="w-full bg-slate-50 rounded-2xl text-sm py-3 pl-4 pr-10 transition-all">
+                                       class="w-full bg-slate-50 rounded-2xl text-sm py-3 pl-4 pr-10 transition-all uppercase">
                                 <button type="button"
                                         tabindex="-1"
                                         @click="locationDropdownOpen = !locationDropdownOpen; if (locationDropdownOpen) $nextTick(() => $refs.locationSearchInput?.focus())"
@@ -116,7 +116,7 @@
                         <label for="industry" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Industry</label>
                         <input type="text" name="industry" id="industry" x-model="formData.industry"
                                placeholder="e.g. Artificial Intelligence"
-                               class="w-full bg-slate-50 border-slate-200 rounded-2xl text-sm focus:ring-brand-blue focus:border-brand-blue py-3 px-4 transition-all"
+                               class="w-full bg-slate-50 border-slate-200 rounded-2xl text-sm focus:ring-brand-blue focus:border-brand-blue py-3 px-4 transition-all uppercase"
                                @input="formData.industry = formData.industry.toLowerCase()">
                     </div>
 
@@ -125,7 +125,7 @@
                         <label for="position" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Position / Role</label>
                         <input type="text" name="position" id="position" x-model="formData.position"
                                placeholder='e.g. "CEO" OR "Founder"'
-                               class="w-full bg-slate-50 border-slate-200 rounded-2xl text-sm focus:ring-brand-blue focus:border-brand-blue py-3 px-4 transition-all"
+                               class="w-full bg-slate-50 border-slate-200 rounded-2xl text-sm focus:ring-brand-blue focus:border-brand-blue py-3 px-4 transition-all uppercase"
                                @input="formData.position = formData.position.toLowerCase()">
                         <p class="text-[10px] text-slate-400 px-1 mt-1">Use OR to combine roles.</p>
                     </div>
