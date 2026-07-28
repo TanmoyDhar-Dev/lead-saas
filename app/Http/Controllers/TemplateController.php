@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\EmailTemplate;
+use Illuminate\Support\Facades\DB;
 
 class TemplateController extends Controller
 {
@@ -13,7 +14,7 @@ class TemplateController extends Controller
             $templates = EmailTemplate::orderByDesc('is_system_sample')->orderBy('created_at', 'desc')->get();
         } else {
             $templates = EmailTemplate::where('user_id', auth()->id())
-                ->orWhere('is_system_sample', 'true')
+                ->orWhereRaw('is_system_sample = true')
                 ->orderByDesc('is_system_sample')
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -101,17 +102,29 @@ class TemplateController extends Controller
 
     public function setDefault($id)
     {
-        $query = EmailTemplate::query();
-        if (!auth()->user()->isAdmin()) {
-            $query->where('user_id', auth()->id());
-        }
-        $query->update(['is_default' => 'false']);
-        
         $template = EmailTemplate::findOrFail($id);
-        if (!auth()->user()->isAdmin() && $template->user_id !== auth()->id()) {
+        if (! auth()->user()->isAdmin() && $template->user_id !== auth()->id()) {
             abort(403);
         }
-        $template->update(['is_default' => 'true']);
+
+        // Toggle off — use query builder + Postgres boolean literals.
+        // Eloquent boolean cast turns the string 'false' into true ((bool) 'false' === true).
+        if ($template->is_default) {
+            EmailTemplate::query()
+                ->whereKey($template->id)
+                ->update(['is_default' => DB::raw('false')]);
+
+            return back()->with('success', 'Default status removed.');
+        }
+
+        // Clear other defaults for this owner, then activate this template
+        EmailTemplate::query()
+            ->where('user_id', $template->user_id)
+            ->update(['is_default' => DB::raw('false')]);
+
+        EmailTemplate::query()
+            ->whereKey($template->id)
+            ->update(['is_default' => DB::raw('true')]);
 
         return back()->with('success', 'Default template updated.');
     }
@@ -143,7 +156,7 @@ class TemplateController extends Controller
         $query = EmailTemplate::query()->whereIn('id', $validated['ids']);
 
         if (! $user->isAdmin()) {
-            $query->where('user_id', $user->id)->where('is_system_sample', 'false');
+            $query->where('user_id', $user->id)->whereRaw('is_system_sample = false');
         }
 
         $deleted = $query->delete();
