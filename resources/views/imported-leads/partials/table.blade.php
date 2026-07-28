@@ -1,4 +1,4 @@
-<div class="p-0 overflow-x-auto">
+<div class="p-0 overflow-x-auto no-scrollbar">
     <table class="w-full text-left border-collapse min-w-[1100px]">
         <thead>
             <tr class="bg-slate-50/50 border-b border-slate-100">

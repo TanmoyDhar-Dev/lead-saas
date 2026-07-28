@@ -5,6 +5,15 @@
 /* Alpine.js cloak - hide elements until Alpine initializes */
 [x-cloak] { display: none !important; }
 
+/* Hide scrollbar visually while keeping scroll */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
 /* Custom scrollbar for sidebar */
 .overflow-y-auto::-webkit-scrollbar {
     width: 4px;
