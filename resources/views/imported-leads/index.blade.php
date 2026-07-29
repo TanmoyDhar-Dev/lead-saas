@@ -26,10 +26,10 @@
                         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                             <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         </span>
-                        <input type="text" x-model="filters.q" @input.debounce.300ms="fetchLeads()"
+                        <input type="text" x-model="filters.q" @input.debounce.300ms="fetchLeads(1)"
                                placeholder="Search organization, contact, email, phone..."
                                class="w-full bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-brand-blue outline-none py-3 pl-10 pr-10 transition-all">
-                        <button type="button" x-show="filters.q" @click="filters.q = ''; fetchLeads()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                        <button type="button" x-show="filters.q" @click="filters.q = ''; fetchLeads(1)" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
@@ -464,6 +464,7 @@
                 filters: {
                     q: @js(request('q', '')),
                     category: @js($categoryId ?? ''),
+                    page: @js((int) request('page', 1)),
                 },
                 categories: @json(($leadCategories ?? collect())->values()),
                 categoryDropdownOpen: false,
@@ -494,6 +495,7 @@
                     phones: [],
                 },
                 selectedLeadIds: [],
+                selectedLeadsCache: {},
                 selectAll: false,
                 outreachOpen: false,
                 outlookConnected: @json($outlookConnected),
@@ -510,16 +512,36 @@
                 },
 
                 init() {
+                    window.importedLeadsPage = this;
+
                     const defaultTemplate = this.templatesData.find(t => t.is_default);
                     if (defaultTemplate) {
                         this.selectedTemplate = defaultTemplate.id;
                         this.applyTemplate();
                     }
 
+                    this.cacheVisibleSelectedLeads();
+
                     this.$watch('selectedLeadIds', (val) => {
-                        const totalCheckboxes = document.querySelectorAll('.imported-lead-checkbox').length;
-                        this.selectAll = totalCheckboxes > 0 && val.length === totalCheckboxes;
+                        this.cacheVisibleSelectedLeads();
+                        const pageIds = this.currentPageLeadIds();
+                        this.selectAll = pageIds.length > 0 && pageIds.every((id) => val.includes(id));
                     });
+                },
+
+                currentPageLeadIds() {
+                    return Array.from(document.querySelectorAll('.imported-lead-checkbox')).map((cb) => cb.value);
+                },
+
+                cacheVisibleSelectedLeads() {
+                    const next = { ...this.selectedLeadsCache };
+                    document.querySelectorAll('.imported-lead-checkbox').forEach((cb) => {
+                        next[cb.value] = {
+                            org: cb.dataset.org || next[cb.value]?.org || 'Lead',
+                            contact: cb.dataset.contact || next[cb.value]?.contact || '',
+                        };
+                    });
+                    this.selectedLeadsCache = next;
                 },
 
                 get selectedCategoryLabel() {
@@ -561,7 +583,7 @@
                     this.filters.category = id || '';
                     this.categoryDropdownOpen = false;
                     this.categorySearch = id ? (this.categories.find(c => String(c.id) === String(id))?.name || '') : '';
-                    this.fetchLeads();
+                    this.fetchLeads(1);
                 },
 
                 selectFirstFilteredCategory() {
@@ -600,15 +622,25 @@
                 },
 
                 toggleSelectAll() {
+                    const pageIds = this.currentPageLeadIds();
+                    this.cacheVisibleSelectedLeads();
+
                     if (this.selectAll) {
-                        const checkboxes = document.querySelectorAll('.imported-lead-checkbox');
-                        this.selectedLeadIds = Array.from(checkboxes).map(cb => cb.value);
+                        this.selectedLeadIds = [...new Set([...this.selectedLeadIds, ...pageIds])];
                     } else {
-                        this.selectedLeadIds = [];
+                        this.selectedLeadIds = this.selectedLeadIds.filter((id) => !pageIds.includes(id));
                     }
                 },
 
                 leadLabel(id) {
+                    const cached = this.selectedLeadsCache[id];
+                    if (cached) {
+                        return {
+                            org: cached.org || 'Lead',
+                            contact: cached.contact || '',
+                        };
+                    }
+
                     const cb = document.querySelector('.imported-lead-checkbox[value="' + id + '"]');
                     return {
                         org: cb?.dataset?.org || 'Lead',
@@ -622,6 +654,7 @@
                         window.toast?.warning('Connect Microsoft Outlook first under Integrations.');
                         return;
                     }
+                    this.cacheVisibleSelectedLeads();
                     this.outreachFiles = [];
                     this.outreachOpen = true;
                 },
@@ -807,12 +840,18 @@
                     }
                 },
 
-                async fetchLeads() {
+                async fetchLeads(page = null) {
                     this.loading = true;
+                    if (page !== null) {
+                        this.filters.page = page;
+                    }
                     try {
                         const params = new URLSearchParams();
                         if (this.filters.q) params.set('q', this.filters.q);
                         if (this.filters.category) params.set('category', this.filters.category);
+                        if (this.filters.page && Number(this.filters.page) > 1) {
+                            params.set('page', String(this.filters.page));
+                        }
                         const qs = params.toString();
                         const res = await fetch(@js(route('imported-leads.index')) + (qs ? '?' + qs : ''), {
                             headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -821,9 +860,12 @@
                         const html = await res.text();
                         const el = document.getElementById('imported-leads-table');
                         el.innerHTML = html;
-                        this.selectedLeadIds = [];
-                        this.selectAll = false;
                         if (window.Alpine?.initTree) window.Alpine.initTree(el);
+
+                        this.cacheVisibleSelectedLeads();
+                        const pageIds = this.currentPageLeadIds();
+                        this.selectAll = pageIds.length > 0 && pageIds.every((id) => this.selectedLeadIds.includes(id));
+
                         window.history.replaceState({}, '', @js(route('imported-leads.index')) + (qs ? '?' + qs : ''));
                     } finally {
                         this.loading = false;
@@ -917,13 +959,17 @@
         window.importedLeadManager = importedLeadManager;
 
         document.addEventListener('click', function (e) {
-            if (e.target.closest('#imported-leads-table .pagination a') && window.Alpine) {
+            if (e.target.closest('#imported-leads-table .pagination a')) {
                 e.preventDefault();
                 const link = e.target.closest('a');
+                if (!link?.href) return;
                 const url = new URL(link.href);
-                const root = document.querySelector('[x-data]');
-                // Handled via fetchLeads with page from URL in next iteration - direct navigation for pagination is fine
-                window.location.href = link.href;
+                const page = url.searchParams.get('page') || '1';
+                if (window.importedLeadsPage && typeof window.importedLeadsPage.fetchLeads === 'function') {
+                    window.importedLeadsPage.fetchLeads(page);
+                } else {
+                    window.location.href = link.href;
+                }
             }
         });
     </script>
