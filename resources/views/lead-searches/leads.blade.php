@@ -99,7 +99,7 @@
                         class="px-5 py-2 rounded-xl text-sm font-bold bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white border border-rose-100 transition-all flex items-center h-[42px]">
                     DELETE (<span x-text="selectedLeadIds.length"></span>)
                 </button>
-                <button x-bind:disabled="selectedLeadIds.length === 0" @click="showDispatchModal = true" 
+                <button x-bind:disabled="selectedLeadIds.length === 0" @click="cacheVisibleSelectedLeads(); showDispatchModal = true" 
                         :class="selectedLeadIds.length === 0 ? 'opacity-50 cursor-not-allowed bg-slate-300 text-slate-500 shadow-none' : 'bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-95'" 
                         class="px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center h-[42px]">
                     EMAIL OUTREACH (<span x-text="selectedLeadIds.length"></span>)
@@ -129,10 +129,10 @@
                     <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
                         <template x-for="id in selectedLeadIds" :key="id">
                             <div class="p-4 bg-white border border-slate-200 rounded-xl mb-2 flex flex-col hover:border-brand-blue/30 transition-colors shadow-sm">
-                                <span class="text-sm font-black text-slate-800" 
-                                      x-text="(leadsData.data.find(l => l.id == id) || {}).full_name || 'Unknown Name'"></span>
-                                <span class="text-[11px] font-bold text-slate-500 mt-1" 
-                                      x-text="(leadsData.data.find(l => l.id == id) || {}).job_title || 'No Title Available'"></span>
+                                <span class="text-sm font-black text-slate-800"
+                                      x-text="selectedLeadLabel(id, 'full_name')"></span>
+                                <span class="text-[11px] font-bold text-slate-500 mt-1"
+                                      x-text="selectedLeadLabel(id, 'job_title')"></span>
                             </div>
                         </template>
                     </div>
@@ -289,6 +289,7 @@
                 },
                 leadsData: @json($leads),
                 selectedLeadIds: [],
+                selectedLeadsCache: {},
                 selectAll: false,
                 showDispatchModal: false,
                 templatesData: @json($templates ?? []),
@@ -319,6 +320,7 @@
                 init() {
                     window.leadManager = this;
                     this.syncOutreachPolling();
+                    this.seedLeadsCacheFromData(this.leadsData?.data || []);
                     
                     const defaultTemplate = this.templatesData.find(t => t.is_default);
                     if (defaultTemplate) {
@@ -332,16 +334,63 @@
                     }
 
                     this.$watch('selectedLeadIds', (val) => {
-                        const totalCheckboxes = document.querySelectorAll('.lead-checkbox').length;
-                        this.selectAll = val.length > 0 && val.length === totalCheckboxes;
+                        this.cacheVisibleSelectedLeads();
+                        const pageIds = this.currentPageLeadIds();
+                        this.selectAll = pageIds.length > 0 && pageIds.every((id) => val.includes(id));
                     });
                 },
+
+                currentPageLeadIds() {
+                    return Array.from(document.querySelectorAll('.lead-checkbox')).map((cb) => cb.value);
+                },
+
+                seedLeadsCacheFromData(leads) {
+                    if (!Array.isArray(leads) || leads.length === 0) return;
+                    const next = { ...this.selectedLeadsCache };
+                    leads.forEach((lead) => {
+                        if (!lead?.id) return;
+                        next[lead.id] = {
+                            full_name: lead.full_name || '',
+                            job_title: lead.job_title || '',
+                        };
+                    });
+                    this.selectedLeadsCache = next;
+                },
+
+                cacheVisibleSelectedLeads() {
+                    const next = { ...this.selectedLeadsCache };
+                    document.querySelectorAll('.lead-checkbox').forEach((cb) => {
+                        next[cb.value] = {
+                            full_name: cb.dataset.fullName || next[cb.value]?.full_name || '',
+                            job_title: cb.dataset.jobTitle || next[cb.value]?.job_title || '',
+                        };
+                    });
+                    (this.leadsData?.data || []).forEach((lead) => {
+                        if (!lead?.id) return;
+                        next[lead.id] = {
+                            full_name: lead.full_name || next[lead.id]?.full_name || '',
+                            job_title: lead.job_title || next[lead.id]?.job_title || '',
+                        };
+                    });
+                    this.selectedLeadsCache = next;
+                },
+
+                selectedLeadLabel(id, field) {
+                    const cached = this.selectedLeadsCache[id];
+                    if (field === 'full_name') {
+                        return (cached && cached.full_name) ? cached.full_name : 'Unknown Name';
+                    }
+                    return (cached && cached.job_title) ? cached.job_title : 'No Title Available';
+                },
+
                 toggleSelectAll() {
+                    const pageIds = this.currentPageLeadIds();
+                    this.cacheVisibleSelectedLeads();
+
                     if (this.selectAll) {
-                        const checkboxes = document.querySelectorAll('.lead-checkbox');
-                        this.selectedLeadIds = Array.from(checkboxes).map(cb => cb.value);
+                        this.selectedLeadIds = [...new Set([...this.selectedLeadIds, ...pageIds])];
                     } else {
-                        this.selectedLeadIds = [];
+                        this.selectedLeadIds = this.selectedLeadIds.filter((id) => !pageIds.includes(id));
                     }
                 },
 
@@ -474,6 +523,10 @@
                         if (container) {
                             this.totalLeadsCount = parseInt(container.getAttribute('data-total-count'));
                         }
+
+                        this.cacheVisibleSelectedLeads();
+                        const pageIds = this.currentPageLeadIds();
+                        this.selectAll = pageIds.length > 0 && pageIds.every((id) => this.selectedLeadIds.includes(id));
 
                         this.syncOutreachPolling();
                         this.loading = false;

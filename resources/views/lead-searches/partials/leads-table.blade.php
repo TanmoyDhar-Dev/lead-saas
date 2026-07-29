@@ -25,7 +25,12 @@
                 @forelse ($leads as $lead)
                 <tr class="hover:bg-slate-50 transition-colors group cursor-pointer" @click="openModal('{{ $lead->id }}')">
                     <td class="px-4 py-4 lf-sticky-left bg-white group-hover:bg-slate-50 border-r border-slate-100" @click.stop>
-                        <input type="checkbox" value="{{ $lead->id }}" x-model="selectedLeadIds" class="lead-checkbox w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
+                        <input type="checkbox"
+                               value="{{ $lead->id }}"
+                               data-full-name="{{ e($lead->full_name ?: '') }}"
+                               data-job-title="{{ e($lead->job_title ?: '') }}"
+                               x-model="selectedLeadIds"
+                               class="lead-checkbox w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
                     </td>
                     <td class="px-4 py-4 min-w-[200px]">
                         <div class="flex items-center">
