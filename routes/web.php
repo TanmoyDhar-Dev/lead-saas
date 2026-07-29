@@ -46,6 +46,7 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     Route::post('/lead-searches/dispatch', [LeadSearchController::class, 'dispatchOutreach'])->name('lead-searches.dispatch');
     Route::post('/lead-searches/bulk-delete', [LeadSearchController::class, 'bulkDelete'])->name('lead-searches.bulk-delete');
     Route::get('/lead-searches/{leadSearch}/leads', [LeadSearchController::class, 'leads'])->name('lead-searches.leads');
+    Route::post('/lead-searches/{leadSearch}/leads/export', [LeadSearchController::class, 'exportLeads'])->name('lead-searches.leads.export');
     Route::get('/lead-searches/{leadSearch}/leads/{lead}/json', [LeadSearchController::class, 'leadJson'])->name('lead-searches.leads.json');
     Route::delete('/lead-searches/{leadSearch}', [LeadSearchController::class, 'destroy'])->name('lead-searches.destroy');
 

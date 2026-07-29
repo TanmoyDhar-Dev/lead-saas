@@ -13,6 +13,9 @@ use App\Services\N8nLeadCollectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LeadSearchController extends Controller
 {
@@ -197,6 +200,116 @@ class LeadSearchController extends Controller
         }
 
         return view('lead-searches.leads', compact('leadSearch', 'leads', 'templates'));
+    }
+
+    /**
+     * Export leads for a specific search as an Excel (.xlsx) file.
+     * - With lead_ids: export only those checked leads
+     * - Without lead_ids: export all leads (honoring optional q filter)
+     */
+    public function exportLeads(Request $request, LeadSearch $leadSearch): StreamedResponse
+    {
+        if (! auth()->user()->isAdmin() && $leadSearch->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'lead_ids' => ['nullable', 'array'],
+            'lead_ids.*' => ['uuid'],
+            'q' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $query = $leadSearch->scopedLeads();
+
+        $leadIds = array_values(array_filter($validated['lead_ids'] ?? []));
+
+        if ($leadIds !== []) {
+            $query->whereIn('id', $leadIds);
+        } elseif ($q = trim((string) ($validated['q'] ?? ''))) {
+            $query->where(function ($query) use ($q) {
+                $query->where('full_name', 'ilike', "%{$q}%")
+                    ->orWhere('personal_email', 'ilike', "%{$q}%")
+                    ->orWhere('company_email', 'ilike', "%{$q}%")
+                    ->orWhere('company_name', 'ilike', "%{$q}%")
+                    ->orWhere('linkedin_url', 'ilike', "%{$q}%")
+                    ->orWhere('position', 'ilike', "%{$q}%")
+                    ->orWhere('job_title', 'ilike', "%{$q}%");
+            });
+        }
+
+        $outreachUserId = $leadSearch->user_id;
+
+        $leads = $query
+            ->with(['campaignRecipients' => function ($recipientQuery) use ($outreachUserId) {
+                $recipientQuery
+                    ->whereHas('campaign', fn ($campaignQuery) => $campaignQuery->where('user_id', $outreachUserId))
+                    ->orderByDesc('updated_at');
+            }])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Leads');
+
+        $headers = [
+            'Full Name',
+            'Job Title',
+            'Position',
+            'LinkedIn',
+            'Personal Email',
+            'Company Email',
+            'Company Name',
+            'Industry',
+            'Company Website',
+            'Company LinkedIn',
+            'Company City',
+            'Company Country',
+            'Company State',
+            'Company Address',
+            'Company Domain',
+            'Outreach Status',
+            'Created At',
+        ];
+
+        $sheet->fromArray($headers, null, 'A1');
+
+        $row = 2;
+        foreach ($leads as $lead) {
+            $sheet->fromArray([
+                $lead->full_name,
+                $lead->job_title,
+                $lead->position,
+                $lead->linkedin_url,
+                $lead->personal_email,
+                $lead->company_email,
+                $lead->company_name,
+                $lead->industry,
+                $lead->company_website,
+                $lead->company_linkedin,
+                $lead->company_city,
+                $lead->company_country,
+                $lead->company_state,
+                $lead->company_address,
+                $lead->company_domain,
+                $lead->campaignRecipients->first()?->status,
+                optional($lead->created_at)?->format('Y-m-d H:i:s'),
+            ], null, "A{$row}");
+            $row++;
+        }
+
+        foreach (range('A', 'Q') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $slug = Str::slug($leadSearch->target_location ?: 'extraction', '_');
+        $filename = "leads_extraction_{$slug}_".now()->format('Y-m-d_His').'.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            (new Xlsx($spreadsheet))->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
     /**

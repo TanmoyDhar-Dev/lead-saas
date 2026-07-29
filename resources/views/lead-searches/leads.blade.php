@@ -86,6 +86,13 @@
             {{-- Right: Actions --}}
             <div class="flex items-center space-x-3 shrink-0">
                 <button type="button"
+                        @click="exportSelected()"
+                        class="px-5 py-2 rounded-xl text-sm font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all flex items-center h-[42px]">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    EXPORT EXCEL
+                    <span x-show="selectedLeadIds.length > 0" x-cloak class="ml-1">(<span x-text="selectedLeadIds.length"></span>)</span>
+                </button>
+                <button type="button"
                         x-show="selectedLeadIds.length > 0"
                         x-cloak
                         @click="bulkDeleteSelected()"
@@ -360,6 +367,38 @@
                     });
                     document.body.appendChild(form);
                     form.submit();
+                },
+
+                exportSelected() {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = @js(route('lead-searches.leads.export', $leadSearch));
+
+                    const csrf = document.createElement('input');
+                    csrf.type = 'hidden';
+                    csrf.name = '_token';
+                    csrf.value = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                    form.appendChild(csrf);
+
+                    if (this.selectedLeadIds.length > 0) {
+                        this.selectedLeadIds.forEach((id) => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'lead_ids[]';
+                            input.value = id;
+                            form.appendChild(input);
+                        });
+                    } else if (this.filters.q) {
+                        const q = document.createElement('input');
+                        q.type = 'hidden';
+                        q.name = 'q';
+                        q.value = this.filters.q;
+                        form.appendChild(q);
+                    }
+
+                    document.body.appendChild(form);
+                    form.submit();
+                    form.remove();
                 },
 
                 hasPendingOutreach() {
