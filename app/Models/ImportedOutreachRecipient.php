@@ -29,6 +29,7 @@ class ImportedOutreachRecipient extends Model
         'sent_at',
         'opened_at',
         'open_count',
+        'clicked_at',
     ];
 
     protected function casts(): array
@@ -39,6 +40,7 @@ class ImportedOutreachRecipient extends Model
             'sent_at' => 'datetime',
             'opened_at' => 'datetime',
             'open_count' => 'integer',
+            'clicked_at' => 'datetime',
         ];
     }
 

@@ -134,9 +134,9 @@ class ImportedLeadOutreachService
                     $body .= $signature;
                 }
 
-                if ($deliveryMode === 'send') {
-                    $body .= $this->trackingPixelHtml((string) $recipient->tracking_id);
-                }
+                $trackingId = (string) $recipient->tracking_id;
+                $body = $this->rewriteLinksForTracking($body, $trackingId);
+                $body .= $this->trackingPixelHtml($trackingId);
 
                 $message = [
                     'subject' => $subject,
@@ -337,6 +337,30 @@ class ImportedLeadOutreachService
         $src = rtrim((string) config('app.url'), '/').'/t/o/'.rawurlencode($trackingId).'.gif';
 
         return '<img src="'.e($src).'" width="1" height="1" style="display:none;" alt="" />';
+    }
+
+    private function rewriteLinksForTracking(string $html, string $trackingId): string
+    {
+        return (string) preg_replace_callback(
+            '/<a\s+([^>]*\s)?href=(["\'])([^"\']+)\2/i',
+            function (array $matches) use ($trackingId): string {
+                $prefix = $matches[1] ?? '';
+                $targetUrl = $matches[3];
+
+                if ($targetUrl === '' || str_starts_with(strtolower($targetUrl), 'mailto:') || str_starts_with($targetUrl, '#')) {
+                    return $matches[0];
+                }
+
+                if (str_contains($targetUrl, '/t/c/')) {
+                    return $matches[0];
+                }
+
+                $trackingUrl = url('/t/c/'.$trackingId).'?url='.urlencode($targetUrl);
+
+                return '<a '.$prefix.'href="'.$trackingUrl.'"';
+            },
+            $html
+        );
     }
 
     /**

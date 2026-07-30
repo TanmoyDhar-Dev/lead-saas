@@ -56,8 +56,18 @@ class TrackingController extends Controller
             ->where('tracking_id', $tracking_id)
             ->first();
 
-        if ($recipient && $recipient->clicked_at === null) {
-            $recipient->update(['clicked_at' => now()]);
+        if ($recipient) {
+            if ($recipient->clicked_at === null) {
+                $recipient->update(['clicked_at' => now()]);
+            }
+        } else {
+            $importedRecipient = ImportedOutreachRecipient::query()
+                ->where('tracking_id', $tracking_id)
+                ->first();
+
+            if ($importedRecipient && $importedRecipient->clicked_at === null) {
+                $importedRecipient->update(['clicked_at' => now()]);
+            }
         }
 
         return redirect()->away($url);
