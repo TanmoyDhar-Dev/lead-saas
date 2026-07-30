@@ -19,12 +19,18 @@ class ImportedLeadOutreachController extends Controller
             'delivery_mode' => ['required', 'string'],
             'subject' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string'],
+            'cc_emails' => ['nullable', 'string', 'max:2000'],
             'sender_name' => ['nullable', 'string', 'max:255'],
             'sender_role' => ['nullable', 'string', 'max:255'],
             'sender_company' => ['nullable', 'string', 'max:255'],
             'sender_address' => ['nullable', 'string', 'max:255'],
             'attachments.*' => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:5120'],
         ]);
+
+        $customCcEmails = $this->parseCcEmailsInput($validated['cc_emails'] ?? null);
+        if ($customCcEmails instanceof \Illuminate\Http\RedirectResponse) {
+            return $customCcEmails;
+        }
 
         $user = $request->user();
 
@@ -63,6 +69,7 @@ class ImportedLeadOutreachController extends Controller
                 'email_signature' => $signature,
                 'sender_identity_id' => $senderIdentity?->id,
                 'sender_address' => $validated['sender_address'] ?? null,
+                'cc_emails' => $customCcEmails,
                 'attachments' => $attachmentPaths,
             ]);
         } catch (Throwable $e) {
@@ -89,6 +96,54 @@ class ImportedLeadOutreachController extends Controller
         }
 
         return back()->with('success', 'Outreach finished: '.implode(', ', $parts).'.');
+    }
+
+    /**
+     * Parse optional comma-separated CC input into unique valid emails.
+     *
+     * @return list<string>|\Illuminate\Http\RedirectResponse
+     */
+    private function parseCcEmailsInput(mixed $input): array|\Illuminate\Http\RedirectResponse
+    {
+        if ($input === null || $input === '') {
+            return [];
+        }
+
+        $parts = is_array($input)
+            ? $input
+            : (preg_split('/\s*,\s*/', (string) $input) ?: []);
+
+        $emails = [];
+        $invalid = [];
+        $seen = [];
+
+        foreach ($parts as $part) {
+            $email = trim((string) $part);
+            if ($email === '') {
+                continue;
+            }
+
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $invalid[] = $email;
+                continue;
+            }
+
+            $key = strtolower($email);
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $emails[] = $email;
+        }
+
+        if ($invalid !== []) {
+            return back()->withErrors([
+                'cc_emails' => 'Invalid CC address(es): '.implode(', ', $invalid),
+            ]);
+        }
+
+        return $emails;
     }
 
     /**

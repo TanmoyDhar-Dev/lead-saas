@@ -20,6 +20,7 @@ class ImportedOutreachRecipient extends Model
         'imported_lead_id',
         'tracking_id',
         'to_email',
+        'cc_emails',
         'subject',
         'final_body',
         'status',
@@ -33,6 +34,7 @@ class ImportedOutreachRecipient extends Model
     protected function casts(): array
     {
         return [
+            'cc_emails' => 'array',
             'drafted_at' => 'datetime',
             'sent_at' => 'datetime',
             'opened_at' => 'datetime',

@@ -244,7 +244,7 @@
                     <div class="p-6 border-b border-slate-200 bg-white shrink-0">
                         <h3 class="font-bold text-slate-800">Selected Leads</h3>
                         <div class="mt-4 text-2xl font-black text-brand-blue" x-text="selectedLeadIds.length"></div>
-                        <p class="text-xs text-slate-400 mt-1">Templates only · Microsoft Graph · no n8n</p>
+                        <p class="text-xs text-slate-400 mt-1">Templates only · Microsoft Graph</p>
                     </div>
                     <div class="flex-1 overflow-y-auto p-4">
                         <template x-for="id in selectedLeadIds" :key="id">
@@ -292,6 +292,28 @@
                                         <option :value="t.id" x-text="t.name"></option>
                                     </template>
                                 </select>
+                            </div>
+
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">To</label>
+                                <input type="text"
+                                       readonly
+                                       :value="outreachToPreview()"
+                                       :title="outreachToPreview()"
+                                       placeholder="No primary email on selected leads"
+                                       class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm text-slate-700 focus:ring-0 focus:border-slate-200 py-3 px-4 cursor-default">
+                                {{-- <p class="text-[10px] text-slate-400 mt-1">Primary email per lead · used as the main recipient</p>
+                                 --}}
+                            </div>
+
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">CC</label>
+                                <input type="text"
+                                       name="cc_emails"
+                                       x-model="outreachForm.cc_emails"
+                                       placeholder="cc@example.com, another@example.com"
+                                       class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-3 px-4">
+                                {{-- <p class="text-[10px] text-slate-400 mt-1">Pre-filled from lead secondary emails · edit or add more (comma-separated)</p> --}}
                             </div>
 
                             <div>
@@ -505,6 +527,7 @@
                 outreachForm: {
                     subject: '',
                     body: '',
+                    cc_emails: '',
                     sender_name: '',
                     sender_role: '',
                     sender_company: '',
@@ -539,6 +562,8 @@
                         next[cb.value] = {
                             org: cb.dataset.org || next[cb.value]?.org || 'Lead',
                             contact: cb.dataset.contact || next[cb.value]?.contact || '',
+                            to: cb.dataset.to || next[cb.value]?.to || '',
+                            cc: cb.dataset.cc || next[cb.value]?.cc || '',
                         };
                     });
                     this.selectedLeadsCache = next;
@@ -648,6 +673,23 @@
                     };
                 },
 
+                outreachToPreview() {
+                    return this.selectedLeadIds
+                        .map((id) => this.selectedLeadsCache[id]?.to || '')
+                        .map((email) => String(email || '').trim())
+                        .filter(Boolean)
+                        .join(', ');
+                },
+
+                outreachCcPreview() {
+                    return this.selectedLeadIds
+                        .flatMap((id) => String(this.selectedLeadsCache[id]?.cc || '').split(','))
+                        .map((email) => email.trim())
+                        .filter(Boolean)
+                        .filter((email, index, all) => all.findIndex((e) => e.toLowerCase() === email.toLowerCase()) === index)
+                        .join(', ');
+                },
+
                 openOutreachModal() {
                     if (this.selectedLeadIds.length === 0) return;
                     if (!this.outlookConnected) {
@@ -656,6 +698,7 @@
                     }
                     this.cacheVisibleSelectedLeads();
                     this.outreachFiles = [];
+                    this.outreachForm.cc_emails = this.outreachCcPreview();
                     this.outreachOpen = true;
                 },
 

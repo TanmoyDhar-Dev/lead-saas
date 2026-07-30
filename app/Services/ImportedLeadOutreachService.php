@@ -30,6 +30,7 @@ class ImportedLeadOutreachService
      *     email_signature?: ?string,
      *     sender_identity_id?: ?string,
      *     sender_address?: ?string,
+     *     cc_emails?: list<string>,
      *     attachments?: list<array{path: string, name: string, contentType: string}>
      * }  $payload
      * @return array{outreach: ImportedOutreach, sent: int, drafted: int, failed: int, results: list<array<string, mixed>>}
@@ -53,8 +54,9 @@ class ImportedLeadOutreachService
         $accessToken = ConnectedMailbox::getFreshAccessToken($mailbox);
         $deliveryMode = $payload['delivery_mode'] === 'send' ? 'send' : 'draft';
         $attachmentMeta = is_array($payload['attachments'] ?? null) ? $payload['attachments'] : [];
+        $customCcEmails = is_array($payload['cc_emails'] ?? null) ? $payload['cc_emails'] : [];
 
-        $outreach = DB::transaction(function () use ($user, $leads, $payload, $deliveryMode, $attachmentMeta) {
+        $outreach = DB::transaction(function () use ($user, $leads, $payload, $deliveryMode, $attachmentMeta, $customCcEmails) {
             $outreach = ImportedOutreach::create([
                 'user_id' => $user->id,
                 'sender_identity_id' => $payload['sender_identity_id'] ?? null,
@@ -68,8 +70,8 @@ class ImportedLeadOutreachService
             ]);
 
             foreach ($leads as $lead) {
-                $toEmail = $lead->primaryEmail();
-                if (! $toEmail) {
+                $addresses = $this->resolveUnifiedAddresses($lead, $customCcEmails);
+                if ($addresses === null) {
                     continue;
                 }
 
@@ -77,7 +79,8 @@ class ImportedLeadOutreachService
                     'imported_outreach_id' => $outreach->id,
                     'imported_lead_id' => $lead->id,
                     'tracking_id' => (string) Str::uuid(),
-                    'to_email' => $toEmail,
+                    'to_email' => $addresses['to'],
+                    'cc_emails' => $addresses['cc'] !== [] ? $addresses['cc'] : null,
                     'subject' => null,
                     'status' => 'pending',
                 ]);
@@ -139,6 +142,7 @@ class ImportedLeadOutreachService
                     'subject' => $subject,
                     'html' => $body,
                     'to' => $recipient->to_email,
+                    'cc' => is_array($recipient->cc_emails) ? $recipient->cc_emails : [],
                     'attachments' => $graphAttachments,
                 ];
 
@@ -232,6 +236,76 @@ class ImportedLeadOutreachService
         $address = e($senderAddress);
 
         return "<br><br>--<br><strong>{$name}</strong><br>{$role}".($role !== '' && $company !== '' ? ' | ' : '')."{$company}<br>{$address}";
+    }
+
+    /**
+     * Resolve To from the lead, and CC from the campaign form submission.
+     * Submitted CCs are sanitized, deduped, and must not include the To address.
+     *
+     * @param  list<string>  $submittedCcEmails
+     * @return array{to: string, cc: list<string>}|null
+     */
+    private function resolveUnifiedAddresses(ImportedLead $lead, array $submittedCcEmails = []): ?array
+    {
+        $seen = [];
+        $ordered = [];
+
+        foreach ($lead->emails as $emailRow) {
+            $raw = trim((string) ($emailRow->email ?? ''));
+            if ($raw === '' || ! filter_var($raw, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+
+            $key = strtolower($raw);
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $ordered[] = [
+                'email' => $raw,
+                'is_primary' => (bool) $emailRow->is_primary,
+            ];
+        }
+
+        if ($ordered === []) {
+            return null;
+        }
+
+        $primaryIndex = null;
+        foreach ($ordered as $index => $item) {
+            if ($item['is_primary']) {
+                $primaryIndex = $index;
+                break;
+            }
+        }
+
+        $primaryIndex ??= 0;
+        $to = $ordered[$primaryIndex]['email'];
+        $toKey = strtolower($to);
+
+        $cc = [];
+        $ccSeen = [$toKey => true];
+
+        foreach ($submittedCcEmails as $extra) {
+            $raw = trim((string) $extra);
+            if ($raw === '' || ! filter_var($raw, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+
+            $key = strtolower($raw);
+            if (isset($ccSeen[$key])) {
+                continue;
+            }
+
+            $ccSeen[$key] = true;
+            $cc[] = $raw;
+        }
+
+        return [
+            'to' => $to,
+            'cc' => $cc,
+        ];
     }
 
     private function substitute(string $template, ImportedLead $lead, string $email): string

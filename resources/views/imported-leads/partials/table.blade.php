@@ -19,11 +19,20 @@
                 $outreachStatus = $lead->outreachRecipients->first()?->status;
             @endphp
             <tr class="hover:bg-slate-50 transition-colors group">
+                @php
+                    $emails = $lead->emails;
+                    $primaryEmail = $emails->firstWhere('is_primary', true) ?? $emails->first();
+                    $ccEmails = $primaryEmail
+                        ? $emails->reject(fn ($e) => $e->id === $primaryEmail->id)->pluck('email')->filter()->values()
+                        : collect();
+                @endphp
                 <td class="px-3 py-4 lf-sticky-left bg-white group-hover:bg-slate-50 border-r border-slate-100" @click.stop>
                     <input type="checkbox"
                            value="{{ $lead->id }}"
                            data-org="{{ e($lead->organization_name ?: '—') }}"
                            data-contact="{{ e($lead->contact_name ?: '—') }}"
+                           data-to="{{ e($primaryEmail?->email ?? '') }}"
+                           data-cc="{{ e($ccEmails->implode(', ')) }}"
                            x-model="selectedLeadIds"
                            class="imported-lead-checkbox w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
                 </td>
@@ -37,13 +46,15 @@
                     <div class="text-sm font-medium text-slate-700">{{ $lead->contact_name ?: '—' }}</div>
                 </td>
                 <td class="px-3 py-4">
-                    @php $emails = $lead->emails; @endphp
-                    @if($emails->isEmpty())
+                    @if(! $primaryEmail)
                         <span class="text-[10px] text-slate-300">—</span>
                     @else
-                        <div class="text-xs font-medium text-slate-700">{{ $emails->firstWhere('is_primary', true)?->email ?? $emails->first()->email }}</div>
-                        @if($emails->count() > 1)
-                            <div class="text-[10px] text-slate-400 mt-0.5">+{{ $emails->count() - 1 }} more</div>
+                        <div class="text-xs font-medium text-slate-700">{{ $primaryEmail->email }}</div>
+                        @if($ccEmails->isNotEmpty())
+                            <span class="inline-flex items-center mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-100 cursor-help"
+                                  title="CC: {{ $ccEmails->implode(', ') }}">
+                                +{{ $ccEmails->count() }} more
+                            </span>
                         @endif
                     @endif
                 </td>

@@ -11,6 +11,7 @@ class MicrosoftGraphMailService
      *     subject: string,
      *     html: string,
      *     to: string,
+     *     cc?: list<string>,
      *     attachments?: list<array{name: string, contentType: string, contentBytes: string}>
      * }  $message
      * @return array{successful: bool, status: int|null, body: mixed, error: string|null}
@@ -30,6 +31,7 @@ class MicrosoftGraphMailService
      *     subject: string,
      *     html: string,
      *     to: string,
+     *     cc?: list<string>,
      *     attachments?: list<array{name: string, contentType: string, contentBytes: string}>
      * }  $message
      * @return array{successful: bool, status: int|null, body: mixed, error: string|null}
@@ -48,6 +50,7 @@ class MicrosoftGraphMailService
      *     subject: string,
      *     html: string,
      *     to: string,
+     *     cc?: list<string>,
      *     attachments?: list<array{name: string, contentType: string, contentBytes: string}>
      * }  $message
      * @return array<string, mixed>
@@ -68,6 +71,22 @@ class MicrosoftGraphMailService
                 ],
             ],
         ];
+
+        $cc = array_values(array_filter(
+            is_array($message['cc'] ?? null) ? $message['cc'] : [],
+            fn ($email) => is_string($email) && trim($email) !== ''
+        ));
+
+        if ($cc !== []) {
+            $payload['ccRecipients'] = array_map(
+                fn (string $email) => [
+                    'emailAddress' => [
+                        'address' => trim($email),
+                    ],
+                ],
+                $cc
+            );
+        }
 
         $attachments = $message['attachments'] ?? [];
         if (is_array($attachments) && $attachments !== []) {
