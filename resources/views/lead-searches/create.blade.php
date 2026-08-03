@@ -49,7 +49,7 @@
                  class="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center rounded-3xl border border-blue-100">
                 <div class="w-12 h-12 border-4 border-brand-blue border-t-transparent rounded-full animate-spin mb-4 shadow-lg shadow-blue-500/20"></div>
                 <h3 class="text-lg font-bold text-slate-800" x-text="currentStatusMessage"></h3>
-                <p class="text-xs text-slate-500 font-medium mt-2">Please wait, contacting n8n worker...</p>
+                <p class="text-xs text-slate-500 font-medium mt-2">Please wait, contacting backend worker...</p>
             </div>
 
             <div class="px-6 py-4 border-b border-slate-100">
