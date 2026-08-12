@@ -9,6 +9,7 @@ use App\Models\ImportedOutreachRecipient;
 use App\Models\SenderIdentity;
 use App\Models\User;
 use App\Services\GraphSubscriptionService;
+use App\Support\EmailTracking;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -140,8 +141,7 @@ class ImportedLeadOutreachService
                 }
 
                 $trackingId = (string) $recipient->tracking_id;
-                $body = $this->rewriteLinksForTracking($body, $trackingId);
-                $body .= $this->trackingPixelHtml($trackingId);
+                $body = EmailTracking::appendToHtml($body, $trackingId);
 
                 $message = [
                     'subject' => $subject,
@@ -313,8 +313,7 @@ class ImportedLeadOutreachService
 
         $html = $this->normalizeBodyHtml($body);
         $trackingId = (string) Str::uuid();
-        $html = $this->rewriteLinksForTracking($html, $trackingId);
-        $html .= $this->trackingPixelHtml($trackingId);
+        $html = EmailTracking::appendToHtml($html, $trackingId);
 
         $graphResult = $this->graphMail->replyToMessage($accessToken, $graphMessageId, $html);
 
@@ -480,33 +479,12 @@ class ImportedLeadOutreachService
 
     private function trackingPixelHtml(string $trackingId): string
     {
-        $src = rtrim((string) config('app.url'), '/').'/t/o/'.rawurlencode($trackingId).'.gif';
-
-        return '<img src="'.e($src).'" width="1" height="1" style="display:none;" alt="" />';
+        return EmailTracking::pixelHtml($trackingId);
     }
 
     private function rewriteLinksForTracking(string $html, string $trackingId): string
     {
-        return (string) preg_replace_callback(
-            '/<a\s+([^>]*\s)?href=(["\'])([^"\']+)\2/i',
-            function (array $matches) use ($trackingId): string {
-                $prefix = $matches[1] ?? '';
-                $targetUrl = $matches[3];
-
-                if ($targetUrl === '' || str_starts_with(strtolower($targetUrl), 'mailto:') || str_starts_with($targetUrl, '#')) {
-                    return $matches[0];
-                }
-
-                if (str_contains($targetUrl, '/t/c/')) {
-                    return $matches[0];
-                }
-
-                $trackingUrl = url('/t/c/'.$trackingId).'?url='.urlencode($targetUrl);
-
-                return '<a '.$prefix.'href="'.$trackingUrl.'"';
-            },
-            $html
-        );
+        return EmailTracking::rewriteLinks($html, $trackingId);
     }
 
     /**

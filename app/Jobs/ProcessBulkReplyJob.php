@@ -7,12 +7,14 @@ use App\Exceptions\GraphRateLimitedException;
 use App\Models\ConnectedMailbox;
 use App\Models\ImportedOutreach;
 use App\Models\ImportedOutreachRecipient;
+use App\Support\EmailTracking;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
@@ -75,7 +77,16 @@ class ProcessBulkReplyJob implements ShouldQueue
             return;
         }
 
-        $htmlBody = $this->buildReplyHtml($childOutreach);
+        if (! filled($this->recipient->tracking_id)) {
+            $this->recipient->forceFill([
+                'tracking_id' => (string) Str::uuid(),
+            ])->save();
+        }
+
+        $htmlBody = EmailTracking::appendToHtml(
+            $this->buildReplyHtml($childOutreach),
+            (string) $this->recipient->tracking_id
+        );
 
         // Step 1: createReply (Safeguard B — 404 ghost emails)
         try {

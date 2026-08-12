@@ -11,11 +11,29 @@ use App\Http\Controllers\ImportedLeadController;
 use App\Http\Controllers\ImportedLeadOutreachController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\Admin\AdminUserController;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 
-Route::get('/t/o/{tracking_id}.gif', [TrackingController::class, 'open'])->name('tracking.open');
-Route::get('/t/c/{tracking_id}', [TrackingController::class, 'click'])->name('tracking.click');
+$trackingMiddleware = [
+    EncryptCookies::class,
+    StartSession::class,
+    ShareErrorsFromSession::class,
+    PreventRequestForgery::class,
+];
+
+Route::get('/t/o/{tracking_id}.gif', [TrackingController::class, 'open'])
+    ->withoutMiddleware($trackingMiddleware)
+    ->name('tracking.open');
+Route::get('/t/o/{tracking_id}', [TrackingController::class, 'open'])
+    ->withoutMiddleware($trackingMiddleware)
+    ->name('tracking.open.plain');
+Route::get('/t/c/{tracking_id}', [TrackingController::class, 'click'])
+    ->withoutMiddleware($trackingMiddleware)
+    ->name('tracking.click');
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -63,6 +81,8 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     Route::post('/leads/dispatch', [LeadSearchController::class, 'dispatchOutreach'])->name('leads.dispatch');
 
     Route::get('/imported-leads', [ImportedLeadController::class, 'index'])->name('imported-leads.index');
+    Route::get('/imported-leads/threads', [ImportedLeadController::class, 'threads'])->name('imported-leads.threads');
+    Route::get('/imported-leads/bulk-reply', [ImportedLeadOutreachController::class, 'bulkReplyPage'])->name('imported-leads.bulk-reply');
     Route::get('/imported-leads/import/template', [ImportedLeadController::class, 'downloadImportTemplate'])->name('leads.import.template.download');
     Route::post('/imported-leads/import', [ImportedLeadController::class, 'import'])->name('imported-leads.import');
     Route::post('/imported-leads/outreach', [ImportedLeadOutreachController::class, 'dispatch'])->name('imported-leads.outreach');

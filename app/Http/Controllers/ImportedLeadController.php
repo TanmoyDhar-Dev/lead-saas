@@ -122,6 +122,37 @@ class ImportedLeadController extends Controller
         ));
     }
 
+    public function threads(Request $request)
+    {
+        $user = $request->user();
+
+        $query = ImportedLead::visibleTo($user)
+            ->whereHas('outreachRecipients')
+            ->with([
+                'emails',
+                'outreachRecipients' => fn ($q) => $q->orderByDesc('updated_at'),
+            ])
+            ->orderByDesc('updated_at');
+
+        if ($q = trim((string) $request->input('q'))) {
+            $query->where(function ($builder) use ($q) {
+                $builder->where('organization_name', 'ilike', "%{$q}%")
+                    ->orWhere('contact_name', 'ilike', "%{$q}%")
+                    ->orWhereHas('emails', fn ($emailQuery) => $emailQuery->where('email', 'ilike', "%{$q}%"));
+            });
+        }
+
+        $leads = $query->paginate(30)->withQueryString();
+        $outlookConnected = $user->microsoftMailbox()->exists();
+        $selectedLeadId = trim((string) $request->query('lead', ''));
+
+        return view('imported-leads.threads', compact(
+            'leads',
+            'outlookConnected',
+            'selectedLeadId',
+        ));
+    }
+
     public function import(Request $request, LeadImportService $importService)
     {
         $validated = $request->validate([

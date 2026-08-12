@@ -6,6 +6,19 @@
             ? "$base bg-brand-blue text-white shadow-lg shadow-blue-500/20"
             : "$base text-slate-400 hover:text-white hover:bg-navy-800";
     };
+    $navSubLinkClass = function ($active) {
+        $base = 'flex items-center py-2 pl-11 pr-3 text-[13px] font-medium rounded-xl transition-all duration-200';
+        return $active
+            ? "$base bg-brand-blue text-white shadow-lg shadow-blue-500/20"
+            : "$base text-slate-400 hover:text-white hover:bg-navy-800";
+    };
+    $importedLeadsOpen = request()->routeIs('imported-leads.*');
+    $importedParentClass = function () use ($importedLeadsOpen) {
+        $base = 'flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 w-full';
+        return $importedLeadsOpen
+            ? "$base bg-navy-800 text-white"
+            : "$base text-slate-400 hover:text-white hover:bg-navy-800";
+    };
 @endphp
 
 {{-- ===== DESKTOP SIDEBAR ===== --}}
@@ -73,12 +86,26 @@
                               :class="sidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">Leads</span>
                     </a>
 
-                    {{-- Import Leads --}}
-                    <a href="{{ route('imported-leads.index') }}" class="{{ $navLinkClass(request()->routeIs('imported-leads.*')) }}" title="Import Leads">
-                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                        <span class="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300"
-                              :class="sidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">Imported Leads</span>
-                    </a>
+                    {{-- Imported Leads submenu --}}
+                    <div x-data="{ importedOpen: {{ $importedLeadsOpen ? 'true' : 'false' }} }">
+                        <button type="button"
+                                @click="sidebarCollapsed ? window.location.href = @js(route('imported-leads.index')) : importedOpen = !importedOpen"
+                                class="{{ $importedParentClass() }}"
+                                title="Imported Leads">
+                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            <span class="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 flex-1 text-left"
+                                  :class="sidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">Imported Leads</span>
+                            <svg class="w-4 h-4 shrink-0 transition-transform duration-200"
+                                 :class="importedOpen ? 'rotate-90' : ''"
+                                 x-show="!sidebarCollapsed"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                        <div class="mt-1 space-y-1" x-show="importedOpen && !sidebarCollapsed" x-cloak>
+                            <a href="{{ route('imported-leads.index') }}" class="{{ $navSubLinkClass(request()->routeIs('imported-leads.index')) }}" title="All Leads">All Leads</a>
+                            <a href="{{ route('imported-leads.threads') }}" class="{{ $navSubLinkClass(request()->routeIs('imported-leads.threads')) }}" title="Outreach Thread">Outreach Thread</a>
+                            <a href="{{ route('imported-leads.bulk-reply') }}" class="{{ $navSubLinkClass(request()->routeIs('imported-leads.bulk-reply')) }}" title="Bulk Reply">Bulk Reply</a>
+                        </div>
+                    </div>
 
                     {{-- Templates --}}
                     <a href="{{ route('templates.index') }}" class="{{ $navLinkClass(request()->routeIs('templates.*')) }}" title="Templates">
@@ -185,10 +212,18 @@
                         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         <span class="ml-3">Leads</span>
                     </a>
-                    <a href="{{ route('imported-leads.index') }}" @click="sidebarOpen = false" class="{{ $navLinkClass(request()->routeIs('imported-leads.*')) }}">
-                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                        <span class="ml-3">Import Leads</span>
-                    </a>
+                    <div x-data="{ importedOpen: {{ $importedLeadsOpen ? 'true' : 'false' }} }">
+                        <button type="button" @click="importedOpen = !importedOpen" class="{{ $importedParentClass() }}">
+                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            <span class="ml-3 flex-1 text-left">Imported Leads</span>
+                            <svg class="w-4 h-4 shrink-0 transition-transform duration-200" :class="importedOpen ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                        <div class="mt-1 space-y-1" x-show="importedOpen" x-cloak>
+                            <a href="{{ route('imported-leads.index') }}" @click="sidebarOpen = false" class="{{ $navSubLinkClass(request()->routeIs('imported-leads.index')) }}">All Leads</a>
+                            <a href="{{ route('imported-leads.threads') }}" @click="sidebarOpen = false" class="{{ $navSubLinkClass(request()->routeIs('imported-leads.threads')) }}">Outreach Thread</a>
+                            <a href="{{ route('imported-leads.bulk-reply') }}" @click="sidebarOpen = false" class="{{ $navSubLinkClass(request()->routeIs('imported-leads.bulk-reply')) }}">Bulk Reply</a>
+                        </div>
+                    </div>
                     <a href="{{ route('templates.index') }}" @click="sidebarOpen = false" class="{{ $navLinkClass(request()->routeIs('templates.*')) }}">
                         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                         <span class="ml-3">Templates</span>

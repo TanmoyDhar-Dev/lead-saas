@@ -130,6 +130,13 @@ class ImportedLeadOutreachController extends Controller
         ]);
     }
 
+    public function bulkReplyPage(Request $request)
+    {
+        return view('imported-leads.bulk-reply', [
+            'outlookConnected' => $request->user()->microsoftMailbox()->exists(),
+        ]);
+    }
+
     public function bulkReply(BulkReplyRequest $request): JsonResponse
     {
         $user = $request->user();
