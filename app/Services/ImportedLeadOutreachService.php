@@ -8,8 +8,10 @@ use App\Models\ImportedOutreach;
 use App\Models\ImportedOutreachRecipient;
 use App\Models\SenderIdentity;
 use App\Models\User;
+use App\Services\GraphSubscriptionService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -55,6 +57,9 @@ class ImportedLeadOutreachService
         $deliveryMode = $payload['delivery_mode'] === 'send' ? 'send' : 'draft';
         $attachmentMeta = is_array($payload['attachments'] ?? null) ? $payload['attachments'] : [];
         $customCcEmails = is_array($payload['cc_emails'] ?? null) ? $payload['cc_emails'] : [];
+
+        // Ensure inbox webhook subscription exists so replies can be captured.
+        app(GraphSubscriptionService::class)->tryEnsureInboxSubscription($user);
 
         $outreach = DB::transaction(function () use ($user, $leads, $payload, $deliveryMode, $attachmentMeta, $customCcEmails) {
             $outreach = ImportedOutreach::create([
@@ -146,14 +151,24 @@ class ImportedLeadOutreachService
                     'attachments' => $graphAttachments,
                 ];
 
+                // Draft → send (not sendMail) so Graph returns a message id we can store.
                 $graphResult = $deliveryMode === 'send'
                     ? $this->graphMail->send($accessToken, $message)
                     : $this->graphMail->createDraft($accessToken, $message);
+
+                $graphMessageId = is_string($graphResult['graph_message_id'] ?? null)
+                    ? $graphResult['graph_message_id']
+                    : null;
+                $internetMessageId = is_string($graphResult['internet_message_id'] ?? null)
+                    ? $graphResult['internet_message_id']
+                    : null;
 
                 if ($graphResult['successful']) {
                     $recipient->update([
                         'subject' => $subject,
                         'final_body' => $body,
+                        'graph_message_id' => $graphMessageId ?? $recipient->graph_message_id,
+                        'message_id' => $internetMessageId ?? $recipient->message_id,
                         'status' => $deliveryMode === 'send' ? 'sent' : 'drafted',
                         'sent_at' => $deliveryMode === 'send' ? now() : null,
                         'drafted_at' => $deliveryMode === 'draft' ? now() : null,
@@ -168,20 +183,40 @@ class ImportedLeadOutreachService
 
                     $results[] = ['id' => $recipient->id, 'successful' => true, 'error' => null];
                 } else {
+                    $error = $graphResult['error'] ?? 'Graph API error.';
+
+                    Log::error('Imported outreach Graph dispatch failed.', [
+                        'recipient_id' => $recipient->id,
+                        'imported_lead_id' => $recipient->imported_lead_id,
+                        'delivery_mode' => $deliveryMode,
+                        'graph_message_id' => $graphMessageId,
+                        'status' => $graphResult['status'] ?? null,
+                        'error' => $error,
+                    ]);
+
                     $recipient->update([
                         'subject' => $subject,
                         'final_body' => $body,
+                        // Keep draft id when create succeeded but /send failed.
+                        'graph_message_id' => $graphMessageId ?? $recipient->graph_message_id,
+                        'message_id' => $internetMessageId ?? $recipient->message_id,
                         'status' => 'failed',
-                        'failed_reason' => $graphResult['error'] ?? 'Graph API error.',
+                        'failed_reason' => $error,
                     ]);
                     $failed++;
                     $results[] = [
                         'id' => $recipient->id,
                         'successful' => false,
-                        'error' => $graphResult['error'] ?? 'Graph API error.',
+                        'error' => $error,
                     ];
                 }
             } catch (Throwable $e) {
+                Log::error('Imported outreach dispatch threw an exception.', [
+                    'recipient_id' => $recipient->id,
+                    'imported_lead_id' => $recipient->imported_lead_id,
+                    'error' => $e->getMessage(),
+                ]);
+
                 $recipient->update([
                     'status' => 'failed',
                     'failed_reason' => $e->getMessage(),
@@ -213,6 +248,117 @@ class ImportedLeadOutreachService
             'failed' => $failed,
             'results' => $results,
         ];
+    }
+
+    /**
+     * Send an in-app reply on an imported lead's outreach thread via Microsoft Graph.
+     *
+     * @return array{successful: bool, recipient: ?ImportedOutreachRecipient, error: ?string}
+     */
+    public function reply(User $user, ImportedLead $lead, string $body): array
+    {
+        $body = trim($body);
+        if ($body === '') {
+            throw new RuntimeException('Reply body is required.');
+        }
+
+        $mailbox = ConnectedMailbox::query()
+            ->where('user_id', $user->id)
+            ->where('provider', 'microsoft')
+            ->first();
+
+        if (! $mailbox) {
+            throw new RuntimeException('No connected Microsoft mailbox found. Connect Outlook first.');
+        }
+
+        $accessToken = ConnectedMailbox::getFreshAccessToken($mailbox);
+        app(GraphSubscriptionService::class)->tryEnsureInboxSubscription($user);
+
+        $lead->load(['outreachRecipients.inboundMessages']);
+
+        $sourceRecipient = $lead->outreachRecipients
+            ->filter(fn (ImportedOutreachRecipient $r) => $r->status === 'sent')
+            ->sortByDesc(fn (ImportedOutreachRecipient $r) => optional($r->sent_at ?? $r->created_at)?->getTimestamp() ?? 0)
+            ->first();
+
+        if (! $sourceRecipient) {
+            throw new RuntimeException('Send an outreach email first before replying from the app.');
+        }
+
+        $latestInbound = $lead->outreachRecipients
+            ->flatMap(fn (ImportedOutreachRecipient $r) => $r->inboundMessages)
+            ->sortByDesc(fn ($inbound) => optional($inbound->received_at ?? $inbound->created_at)?->getTimestamp() ?? 0)
+            ->first();
+
+        $graphMessageId = null;
+        if ($latestInbound && is_string($latestInbound->graph_message_id) && $latestInbound->graph_message_id !== '') {
+            $graphMessageId = $latestInbound->graph_message_id;
+        }
+
+        if ($graphMessageId === null) {
+            $internetMessageId = is_string($sourceRecipient->message_id) ? trim($sourceRecipient->message_id) : '';
+            if ($internetMessageId === '') {
+                throw new RuntimeException(
+                    'Cannot thread this reply: the original outreach has no message id. Send a new outreach first.'
+                );
+            }
+
+            $graphMessageId = $this->graphMail->findMessageIdByInternetMessageId($accessToken, $internetMessageId);
+            if ($graphMessageId === null) {
+                throw new RuntimeException(
+                    'Could not find the original message in Outlook to reply to. Check the connected mailbox.'
+                );
+            }
+        }
+
+        $html = $this->normalizeBodyHtml($body);
+        $trackingId = (string) Str::uuid();
+        $html = $this->rewriteLinksForTracking($html, $trackingId);
+        $html .= $this->trackingPixelHtml($trackingId);
+
+        $graphResult = $this->graphMail->replyToMessage($accessToken, $graphMessageId, $html);
+
+        if (! $graphResult['successful']) {
+            return [
+                'successful' => false,
+                'recipient' => null,
+                'error' => $graphResult['error'] ?? 'Failed to send reply via Microsoft Graph.',
+            ];
+        }
+
+        $subject = is_string($graphResult['subject'] ?? null) && $graphResult['subject'] !== ''
+            ? $graphResult['subject']
+            : $this->replySubject((string) ($sourceRecipient->subject ?? $latestInbound?->subject ?? 'Outreach'));
+
+        $recipient = ImportedOutreachRecipient::create([
+            'imported_outreach_id' => $sourceRecipient->imported_outreach_id,
+            'imported_lead_id' => $lead->id,
+            'tracking_id' => $trackingId,
+            'graph_message_id' => $graphResult['graph_message_id'] ?? null,
+            'message_id' => $graphResult['internet_message_id'] ?? null,
+            'to_email' => $sourceRecipient->to_email,
+            'cc_emails' => is_array($sourceRecipient->cc_emails) ? $sourceRecipient->cc_emails : null,
+            'subject' => $subject,
+            'final_body' => $html,
+            'status' => 'sent',
+            'sent_at' => now(),
+        ]);
+
+        return [
+            'successful' => true,
+            'recipient' => $recipient,
+            'error' => null,
+        ];
+    }
+
+    private function replySubject(string $originalSubject): string
+    {
+        $subject = trim($originalSubject);
+        if ($subject === '') {
+            return 'Re:';
+        }
+
+        return preg_match('/^re:/i', $subject) === 1 ? $subject : 'Re: '.$subject;
     }
 
     public function buildSignatureHtml(

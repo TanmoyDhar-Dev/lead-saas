@@ -48,6 +48,8 @@ return [
         'redirect' => env('AZURE_REDIRECT_URI')
             ?: rtrim((string) env('APP_URL', 'http://localhost:8000'), '/').'/auth/microsoft/callback',
         'tenant' => env('AZURE_TENANT_ID', 'common'),
+        // Public HTTPS webhook endpoint (use your ngrok URL in local dev).
+        'graph_webhook_url' => env('GRAPH_WEBHOOK_URL')
+            ?: (rtrim((string) env('APP_URL', 'http://localhost:8000'), '/').'/webhooks/graph/notifications'),
     ],
-
 ];

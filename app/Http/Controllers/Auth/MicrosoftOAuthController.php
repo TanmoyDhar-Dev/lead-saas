@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\ConnectedMailbox;
+use App\Services\GraphSubscriptionService;
 use App\Support\MicrosoftOAuth;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -100,6 +101,8 @@ class MicrosoftOAuthController extends Controller
                 'token_expires_at' => Carbon::now()->addSeconds($expiresIn),
             ]
         );
+
+        app(GraphSubscriptionService::class)->tryEnsureInboxSubscription(Auth::user());
 
         return $this->finishOAuth($request, true, 'Outlook connected successfully.');
     }

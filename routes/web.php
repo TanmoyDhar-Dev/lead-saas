@@ -66,6 +66,7 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     Route::get('/imported-leads/import/template', [ImportedLeadController::class, 'downloadImportTemplate'])->name('leads.import.template.download');
     Route::post('/imported-leads/import', [ImportedLeadController::class, 'import'])->name('imported-leads.import');
     Route::post('/imported-leads/outreach', [ImportedLeadOutreachController::class, 'dispatch'])->name('imported-leads.outreach');
+    Route::post('/imported-leads/{importedLead}/reply', [ImportedLeadOutreachController::class, 'reply'])->name('imported-leads.reply');
     Route::post('/imported-leads/bulk-delete', [ImportedLeadController::class, 'bulkDelete'])->name('imported-leads.bulk-delete');
     Route::get('/imported-leads/{importedLead}', [ImportedLeadController::class, 'show'])->name('imported-leads.show');
     Route::put('/imported-leads/{importedLead}', [ImportedLeadController::class, 'update'])->name('imported-leads.update');

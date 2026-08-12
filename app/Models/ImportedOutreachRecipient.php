@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ImportedOutreachRecipient extends Model
 {
@@ -19,6 +20,8 @@ class ImportedOutreachRecipient extends Model
         'imported_outreach_id',
         'imported_lead_id',
         'tracking_id',
+        'graph_message_id',
+        'message_id',
         'to_email',
         'cc_emails',
         'subject',
@@ -52,6 +55,11 @@ class ImportedOutreachRecipient extends Model
     public function importedLead(): BelongsTo
     {
         return $this->belongsTo(ImportedLead::class);
+    }
+
+    public function inboundMessages(): HasMany
+    {
+        return $this->hasMany(InboundMessage::class);
     }
 
     public function scopeVisibleTo(Builder $query, User $user): Builder

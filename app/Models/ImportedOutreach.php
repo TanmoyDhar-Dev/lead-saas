@@ -17,6 +17,7 @@ class ImportedOutreach extends Model
     public $incrementing = false;
 
     protected $fillable = [
+        'parent_outreach_id',
         'user_id',
         'sender_identity_id',
         'name',
@@ -36,6 +37,16 @@ class ImportedOutreach extends Model
             'sent_at' => 'datetime',
             'attachments' => 'array',
         ];
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_outreach_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_outreach_id');
     }
 
     public function user(): BelongsTo

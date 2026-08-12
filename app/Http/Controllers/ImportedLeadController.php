@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ImportedLead;
+use App\Models\ImportedOutreachRecipient;
 use App\Models\LeadCategory;
 use App\Models\User;
 use App\Services\LeadImport\LeadImportService;
@@ -245,7 +246,13 @@ class ImportedLeadController extends Controller
     {
         abort_unless($importedLead->isOwnedBy($request->user()), 403);
 
-        $importedLead->load(['emails', 'phones', 'importBatch']);
+        $importedLead->load([
+            'emails',
+            'phones',
+            'importBatch',
+            'outreachRecipients' => fn ($q) => $q->orderBy('created_at')->orderBy('id'),
+            'outreachRecipients.inboundMessages' => fn ($q) => $q->orderBy('received_at')->orderBy('created_at'),
+        ]);
 
         return response()->json([
             'id' => $importedLead->id,
@@ -265,7 +272,162 @@ class ImportedLeadController extends Controller
                 'phone' => $phone->phone,
                 'is_primary' => (bool) $phone->is_primary,
             ])->values(),
+            'email_thread' => $this->buildEmailThread($importedLead),
+            'can_reply' => $importedLead->outreachRecipients
+                ->contains(fn ($r) => $r->status === 'sent'),
         ]);
+    }
+
+    /**
+     * Chronological outbound + inbound messages for the detail modal.
+     * Order: outreach → lead replies → your replies → later lead replies.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function buildEmailThread(ImportedLead $importedLead): array
+    {
+        $thread = collect();
+
+        $recipients = $importedLead->outreachRecipients
+            ->sort(function (ImportedOutreachRecipient $a, ImportedOutreachRecipient $b): int {
+                return [$this->threadSortTimestamp($a->created_at), (string) $a->id]
+                    <=> [$this->threadSortTimestamp($b->created_at), (string) $b->id];
+            })
+            ->values();
+
+        $firstOutboundId = $recipients
+            ->first(fn (ImportedOutreachRecipient $r) => $r->final_body
+                || in_array($r->status, ['sent', 'drafted', 'failed'], true))
+            ?->id;
+
+        foreach ($recipients as $recipient) {
+            $outboundAt = $recipient->sent_at ?? $recipient->drafted_at ?? $recipient->created_at;
+            $isUserReply = $firstOutboundId !== null && (string) $recipient->id !== (string) $firstOutboundId;
+
+            if ($recipient->final_body || in_array($recipient->status, ['sent', 'drafted', 'failed'], true)) {
+                $thread->push([
+                    'id' => 'out-'.$recipient->id,
+                    'direction' => 'outbound',
+                    'label' => $isUserReply ? 'Sent by You' : 'Sent by System',
+                    'from_email' => null,
+                    'to_email' => $recipient->to_email,
+                    'subject' => $recipient->subject,
+                    'status' => $recipient->status,
+                    'body_html' => $this->sanitizeEmailHtml($recipient->final_body),
+                    'body_text' => $this->plainTextFromHtml($recipient->final_body),
+                    'occurred_at' => optional($outboundAt)?->toIso8601String(),
+                    'occurred_at_label' => optional($outboundAt)?->format('M d, Y h:i A'),
+                    'sort_ts' => $this->threadSortTimestamp($outboundAt),
+                    'sort_seq' => $this->threadSortTimestamp($recipient->created_at),
+                    // outreach (0) → lead inbound (1) → your reply (2)
+                    'sort_rank' => $isUserReply ? 2 : 0,
+                ]);
+            }
+
+            $inbounds = $recipient->inboundMessages
+                ->sort(function ($a, $b) use ($recipient): int {
+                    return [
+                        $this->threadSortTimestamp($this->resolveInboundOccurredAt($a, $recipient)),
+                        $this->threadSortTimestamp($a->created_at),
+                        (string) $a->id,
+                    ] <=> [
+                        $this->threadSortTimestamp($this->resolveInboundOccurredAt($b, $recipient)),
+                        $this->threadSortTimestamp($b->created_at),
+                        (string) $b->id,
+                    ];
+                })
+                ->values();
+
+            foreach ($inbounds as $inbound) {
+                $inboundAt = $this->resolveInboundOccurredAt($inbound, $recipient);
+                $thread->push([
+                    'id' => 'in-'.$inbound->id,
+                    'direction' => 'inbound',
+                    'label' => 'Received from Lead',
+                    'from_email' => $inbound->from_email,
+                    'to_email' => null,
+                    'subject' => $inbound->subject,
+                    'status' => 'received',
+                    'body_html' => $this->sanitizeEmailHtml($inbound->body_html)
+                        ?: $this->sanitizeEmailHtml(nl2br(e((string) ($inbound->body_text ?? '')), false)),
+                    'body_text' => $inbound->body_text
+                        ?: $this->plainTextFromHtml($inbound->body_html),
+                    'occurred_at' => optional($inboundAt)?->toIso8601String(),
+                    'occurred_at_label' => optional($inboundAt)?->format('M d, Y h:i A'),
+                    'sort_ts' => $this->threadSortTimestamp($inboundAt),
+                    'sort_seq' => $this->threadSortTimestamp($inbound->created_at),
+                    'sort_rank' => 1,
+                ]);
+            }
+        }
+
+        return $thread
+            ->sort(function (array $a, array $b): int {
+                return [$a['sort_ts'], $a['sort_rank'], $a['sort_seq'], $a['id']]
+                    <=> [$b['sort_ts'], $b['sort_rank'], $b['sort_seq'], $b['id']];
+            })
+            ->map(function (array $row) {
+                unset($row['sort_ts'], $row['sort_seq'], $row['sort_rank']);
+
+                return $row;
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Prefer Graph received_at, but never place a reply before its parent outreach
+     * (common when UTC receivedDateTime was stored without timezone conversion).
+     */
+    private function resolveInboundOccurredAt(object $inbound, ImportedOutreachRecipient $recipient): mixed
+    {
+        $receivedAt = $inbound->received_at ?? null;
+        $createdAt = $inbound->created_at ?? null;
+        $parentAt = $recipient->sent_at ?? $recipient->drafted_at ?? $recipient->created_at;
+
+        if ($receivedAt && $parentAt && $receivedAt->lt($parentAt)) {
+            return $createdAt ?? $receivedAt;
+        }
+
+        return $receivedAt ?? $createdAt;
+    }
+
+    private function threadSortTimestamp(mixed $value): float
+    {
+        if ($value instanceof \Carbon\CarbonInterface) {
+            return (float) $value->format('U.u');
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return (float) \Carbon\Carbon::instance($value)->format('U.u');
+        }
+
+        return 0.0;
+    }
+
+    private function sanitizeEmailHtml(?string $html): ?string
+    {
+        if ($html === null || trim($html) === '') {
+            return null;
+        }
+
+        $allowed = '<p><br><br/><b><strong><i><em><u><a><ul><ol><li><div><span><table><thead><tbody><tr><td><th><h1><h2><h3><h4><blockquote><hr>';
+        $clean = strip_tags($html, $allowed);
+        $clean = preg_replace('/\son\w+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $clean) ?? $clean;
+        $clean = preg_replace('/(href|src)\s*=\s*("|\')\s*javascript:[^"\']*\2/i', '$1="#"', $clean) ?? $clean;
+
+        return $clean;
+    }
+
+    private function plainTextFromHtml(?string $html): ?string
+    {
+        if ($html === null || trim($html) === '') {
+            return null;
+        }
+
+        $text = trim(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+        return $text !== '' ? $text : null;
     }
 
     public function update(Request $request, ImportedLead $importedLead)

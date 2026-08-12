@@ -87,6 +87,11 @@
                         Delete (<span x-text="selectedLeadIds.length"></span>)
                     </button>
                     <button type="button"
+                            @click="openBulkReplyModal()"
+                            class="px-5 py-3 rounded-xl text-sm font-bold bg-white text-slate-700 border border-slate-200 hover:border-brand-blue hover:text-brand-blue transition-all whitespace-nowrap">
+                        Bulk Reply
+                    </button>
+                    <button type="button"
                             @click="openOutreachModal()"
                             :disabled="selectedLeadIds.length === 0"
                             :class="selectedLeadIds.length === 0 ? 'opacity-50 cursor-not-allowed bg-slate-300 text-slate-500 shadow-none' : 'bg-brand-blue text-white hover:bg-blue-600 shadow-lg shadow-blue-500/20'"
@@ -362,6 +367,150 @@
             </div>
         </div>
 
+        {{-- Bulk Reply Modal --}}
+        <div x-show="bulkReplyOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4" @click.self="closeBulkReplyModal()">
+            <div class="w-full max-w-5xl h-[90vh] bg-white rounded-xl flex flex-col overflow-hidden shadow-2xl relative" @click.stop>
+                <div class="p-6 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800">Bulk Reply</h3>
+                        <p class="text-xs text-slate-400 mt-1">Reply to recipients from a previous outreach campaign</p>
+                    </div>
+                    <button type="button" @click="closeBulkReplyModal()" class="text-slate-400 hover:text-slate-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <form @submit.prevent="submitBulkReply()" class="flex-1 flex flex-col overflow-hidden">
+                    <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Select Previous Campaign *</label>
+                            <select x-model="bulkReply.campaignId"
+                                    @change="onBulkReplyCampaignChange()"
+                                    :disabled="bulkReply.campaignsLoading || bulkReply.submitting"
+                                    class="w-full bg-slate-50 border-slate-200 rounded-xl py-3 text-sm focus:ring-brand-blue focus:border-brand-blue">
+                                <option value="">Choose a campaign…</option>
+                                <template x-for="c in bulkReply.campaigns" :key="c.id">
+                                    <option :value="c.id"
+                                            x-text="(c.name || 'Campaign') + ' · ' + (c.subject || 'No subject') + ' (' + (c.sent_recipients_count || 0) + ' sent)'"></option>
+                                </template>
+                            </select>
+                            <p x-show="bulkReply.campaignsLoading" class="text-[11px] text-slate-400 mt-2">Loading campaigns…</p>
+                            <p x-show="!bulkReply.campaignsLoading && bulkReply.campaigns.length === 0" class="text-[11px] text-slate-400 mt-2">
+                                No sent outreach campaigns found yet.
+                            </p>
+                        </div>
+
+                        <div x-show="bulkReply.campaignId" x-cloak class="rounded-2xl border border-slate-100 overflow-hidden">
+                            <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Campaign Recipients</p>
+                                <p class="text-[11px] text-slate-500 font-medium">
+                                    <span x-text="bulkReply.selectedLeadIds.length"></span> selected
+                                </p>
+                            </div>
+
+                            <div class="max-h-56 overflow-y-auto" x-show="!bulkReply.recipientsLoading">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-white border-b border-slate-100">
+                                            <th class="px-3 py-3 w-10">
+                                                <input type="checkbox"
+                                                       :checked="bulkReplySelectAllChecked"
+                                                       @change="toggleBulkReplySelectAll($event.target.checked)"
+                                                       class="w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
+                                            </th>
+                                            <th class="px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Organization</th>
+                                            <th class="px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Contact</th>
+                                            <th class="px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</th>
+                                            <th class="px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sent</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <template x-for="row in bulkReply.recipients" :key="row.imported_lead_id">
+                                            <tr class="hover:bg-slate-50 transition-colors">
+                                                <td class="px-3 py-3">
+                                                    <input type="checkbox"
+                                                           :value="row.imported_lead_id"
+                                                           x-model="bulkReply.selectedLeadIds"
+                                                           class="w-4 h-4 text-brand-blue border-slate-300 rounded focus:ring-brand-blue">
+                                                </td>
+                                                <td class="px-3 py-3 text-sm font-bold text-slate-800" x-text="row.organization_name || '—'"></td>
+                                                <td class="px-3 py-3 text-sm text-slate-700" x-text="row.contact_name || '—'"></td>
+                                                <td class="px-3 py-3 text-xs text-slate-600" x-text="row.to_email || '—'"></td>
+                                                <td class="px-3 py-3 text-[11px] text-slate-400" x-text="row.sent_at_label || '—'"></td>
+                                            </tr>
+                                        </template>
+                                        <tr x-show="bulkReply.recipients.length === 0">
+                                            <td colspan="5" class="px-4 py-8 text-center text-sm text-slate-400">
+                                                No sent recipients found for this campaign.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="p-8 text-center" x-show="bulkReply.recipientsLoading">
+                                <div class="animate-spin w-8 h-8 border-4 border-brand-blue border-t-transparent rounded-full mx-auto"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Email Subject</label>
+                            <input type="text"
+                                   readonly
+                                   :value="bulkReply.replySubject"
+                                   placeholder="Select a campaign to set subject"
+                                   class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm text-slate-700 focus:ring-0 focus:border-slate-200 py-3 px-4 cursor-default">
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-bold text-slate-400">Body *</label>
+                            <textarea x-model="bulkReply.body"
+                                      rows="6"
+                                      required
+                                      :disabled="bulkReply.submitting"
+                                      placeholder="Write your bulk reply…"
+                                      class="w-full bg-slate-50 border-slate-200 rounded-xl mt-1 p-4 text-sm focus:ring-brand-blue focus:border-brand-blue"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 mb-2 block">Attachments (Optional)</label>
+                            <div class="w-full flex items-center justify-center p-6 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 hover:bg-slate-100 hover:border-brand-blue transition-colors cursor-pointer relative"
+                                 :class="bulkReply.dragOver ? 'border-brand-blue bg-blue-50' : ''"
+                                 @dragover.prevent="bulkReply.dragOver = true"
+                                 @dragleave.prevent="bulkReply.dragOver = false"
+                                 @drop.prevent="onBulkReplyDrop($event)">
+                                <input type="file"
+                                       multiple
+                                       accept=".pdf,.doc,.docx,image/*"
+                                       @change="onBulkReplyFilesSelected($event)"
+                                       class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                       :disabled="bulkReply.submitting">
+                                <div class="text-center pointer-events-none">
+                                    <svg class="mx-auto h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                    <span class="mt-2 block text-sm font-semibold text-slate-700">Drop files here or click to upload</span>
+                                    <span class="mt-1 block text-[10px] text-slate-400">PDF, DOC, DOCX, JPG, PNG · max 5 MB each</span>
+                                </div>
+                            </div>
+                            <div x-show="bulkReply.files.length > 0" class="mt-2 text-xs font-bold text-brand-blue">
+                                <span x-text="bulkReply.files.length + ' file(s) selected'"></span>
+                                <button type="button" @click="bulkReply.files = []" class="ml-2 text-slate-400 hover:text-slate-600 font-bold">Clear</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 md:p-6 border-t border-slate-200 bg-white flex justify-end gap-3 shrink-0">
+                        <button type="button" @click="closeBulkReplyModal()" class="px-6 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200" :disabled="bulkReply.submitting">Cancel</button>
+                        <button type="submit"
+                                class="px-6 py-2.5 text-sm font-bold text-white bg-brand-blue rounded-xl hover:bg-blue-600 shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                                :disabled="bulkReply.submitting || !bulkReply.campaignId || bulkReply.selectedLeadIds.length === 0 || !(bulkReply.body || '').trim()">
+                            <span x-show="!bulkReply.submitting">Queue Bulk Reply</span>
+                            <span x-show="bulkReply.submitting">Queuing…</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         {{-- Detail Modal --}}
         <div x-show="detailOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div @click="detailOpen = false" class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
@@ -413,6 +562,104 @@
                 </div>
                 <div class="p-10 text-center" x-show="detailLoading">
                     <div class="animate-spin w-8 h-8 border-4 border-brand-blue border-t-transparent rounded-full mx-auto"></div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Outreach Thread Modal --}}
+        <div x-show="threadOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div @click="threadOpen = false" class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl relative z-10 overflow-hidden max-h-[85vh] flex flex-col" @click.stop>
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">Outreach Thread</h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5"
+                           x-text="(threadData?.organization_name || 'Lead') + (threadData?.contact_name ? (' · ' + threadData.contact_name) : '')"></p>
+                    </div>
+                    <button @click="threadOpen = false" class="text-slate-400 hover:text-slate-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto space-y-3 flex-1 min-h-0" x-show="!threadLoading && threadData" x-ref="threadScroll">
+                    <template x-if="!(threadData?.email_thread || []).length">
+                        <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
+                            <p class="text-sm font-medium text-slate-500">No outreach messages yet</p>
+                            <p class="text-[11px] text-slate-400 mt-1">Sent emails and replies will appear here</p>
+                        </div>
+                    </template>
+
+                    <template x-for="msg in (threadData?.email_thread || [])" :key="msg.id">
+                        <div class="flex"
+                             :class="msg.direction === 'outbound' ? 'justify-end' : 'justify-start'">
+                            <div class="max-w-[85%] rounded-2xl px-4 py-3 border"
+                                 :class="msg.direction === 'outbound'
+                                    ? 'bg-brand-blue text-white border-brand-blue shadow-sm shadow-blue-500/20'
+                                    : 'bg-slate-50 text-slate-800 border-slate-200'">
+                                <div class="flex items-center justify-between gap-3 mb-1.5">
+                                    <span class="text-[9px] font-bold uppercase tracking-widest"
+                                          :class="msg.direction === 'outbound' ? 'text-blue-100' : 'text-slate-400'"
+                                          x-text="msg.label"></span>
+                                    <span class="text-[10px] shrink-0"
+                                          :class="msg.direction === 'outbound' ? 'text-blue-100' : 'text-slate-400'"
+                                          x-text="msg.occurred_at_label || ''"></span>
+                                </div>
+                                <div class="text-[11px] mb-1"
+                                     :class="msg.direction === 'outbound' ? 'text-blue-100' : 'text-slate-500'"
+                                     x-show="msg.from_email || msg.to_email"
+                                     x-text="msg.direction === 'outbound'
+                                        ? ('To: ' + (msg.to_email || '—'))
+                                        : ('From: ' + (msg.from_email || '—'))"></div>
+                                <div class="text-xs font-bold mb-2"
+                                     :class="msg.direction === 'outbound' ? 'text-white' : 'text-slate-800'"
+                                     x-text="msg.subject || '(No subject)'"></div>
+                                <div class="text-xs leading-relaxed break-words"
+                                     :class="msg.direction === 'outbound' ? 'text-blue-50' : 'text-slate-600'"
+                                     x-show="msg.body_html"
+                                     x-html="msg.body_html"></div>
+                                <div class="text-xs leading-relaxed whitespace-pre-wrap"
+                                     :class="msg.direction === 'outbound' ? 'text-blue-50' : 'text-slate-600'"
+                                     x-show="!msg.body_html && msg.body_text"
+                                     x-text="msg.body_text"></div>
+                                <div class="mt-2" x-show="msg.direction === 'outbound' && msg.status">
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-white/15 text-blue-50"
+                                          x-text="msg.status"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <p class="text-[11px] text-slate-400 text-center pt-1"
+                       x-show="(threadData?.email_thread || []).length
+                           && !(threadData?.email_thread || []).some(m => m.direction === 'inbound')">
+                        No replies received yet
+                    </p>
+                </div>
+                <div class="p-10 text-center" x-show="threadLoading">
+                    <div class="animate-spin w-8 h-8 border-4 border-brand-blue border-t-transparent rounded-full mx-auto"></div>
+                </div>
+                <div class="border-t border-slate-100 p-4 bg-slate-50/80 shrink-0"
+                     x-show="!threadLoading && threadData?.can_reply">
+                    <form @submit.prevent="submitThreadReply()" class="space-y-2">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Reply</label>
+                        <textarea x-model="replyBody"
+                                  rows="3"
+                                  placeholder="Write your reply…"
+                                  class="w-full bg-white border-slate-200 rounded-xl text-sm py-2.5 px-3 focus:ring-brand-blue focus:border-brand-blue resize-y min-h-[72px]"
+                                  :disabled="replySending"></textarea>
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-[10px] text-slate-400">Sends from your connected Outlook mailbox</p>
+                            <button type="submit"
+                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-blue text-white text-sm font-semibold hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    :disabled="replySending || !(replyBody || '').trim()">
+                                <span x-show="!replySending">Send Reply</span>
+                                <span x-show="replySending">Sending…</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="border-t border-slate-100 px-4 py-3 bg-slate-50/80 shrink-0"
+                     x-show="!threadLoading && threadData && !threadData.can_reply">
+                    <p class="text-[11px] text-slate-400 text-center">Send outreach first to enable replies from the app</p>
                 </div>
             </div>
         </div>
@@ -506,6 +753,12 @@
                 detailOpen: false,
                 detailLoading: false,
                 detailData: null,
+                threadOpen: false,
+                threadLoading: false,
+                threadData: null,
+                threadLeadId: null,
+                replyBody: '',
+                replySending: false,
                 editOpen: false,
                 editSaving: false,
                 editId: null,
@@ -532,6 +785,20 @@
                     sender_role: '',
                     sender_company: '',
                     sender_address: '',
+                },
+                bulkReplyOpen: false,
+                bulkReply: {
+                    campaignsLoading: false,
+                    recipientsLoading: false,
+                    submitting: false,
+                    dragOver: false,
+                    campaigns: [],
+                    campaignId: '',
+                    replySubject: '',
+                    recipients: [],
+                    selectedLeadIds: [],
+                    body: '',
+                    files: [],
                 },
 
                 init() {
@@ -700,6 +967,172 @@
                     this.outreachFiles = [];
                     this.outreachForm.cc_emails = this.outreachCcPreview();
                     this.outreachOpen = true;
+                },
+
+                get bulkReplySelectAllChecked() {
+                    const ids = this.bulkReply.recipients.map((r) => r.imported_lead_id);
+                    return ids.length > 0 && ids.every((id) => this.bulkReply.selectedLeadIds.includes(id));
+                },
+
+                async openBulkReplyModal() {
+                    if (!this.outlookConnected) {
+                        window.toast?.warning('Connect Microsoft Outlook first under Integrations.');
+                        return;
+                    }
+
+                    this.bulkReplyOpen = true;
+                    this.bulkReply.campaignId = '';
+                    this.bulkReply.replySubject = '';
+                    this.bulkReply.recipients = [];
+                    this.bulkReply.selectedLeadIds = [];
+                    this.bulkReply.body = '';
+                    this.bulkReply.files = [];
+                    this.bulkReply.dragOver = false;
+                    this.bulkReply.submitting = false;
+
+                    await this.fetchBulkReplyCampaigns();
+                },
+
+                closeBulkReplyModal() {
+                    if (this.bulkReply.submitting) return;
+                    this.bulkReplyOpen = false;
+                },
+
+                async fetchBulkReplyCampaigns() {
+                    this.bulkReply.campaignsLoading = true;
+                    try {
+                        const res = await fetch(@js(url('/api/imported-outreach/campaigns')), {
+                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                            credentials: 'same-origin',
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) throw new Error(data.message || 'Failed to load campaigns.');
+                        this.bulkReply.campaigns = data.data || [];
+                    } catch (e) {
+                        this.bulkReply.campaigns = [];
+                        window.toast?.error(e.message || 'Failed to load campaigns.');
+                    } finally {
+                        this.bulkReply.campaignsLoading = false;
+                    }
+                },
+
+                async onBulkReplyCampaignChange() {
+                    this.bulkReply.recipients = [];
+                    this.bulkReply.selectedLeadIds = [];
+                    this.bulkReply.replySubject = '';
+
+                    const id = this.bulkReply.campaignId;
+                    if (!id) return;
+
+                    const campaign = this.bulkReply.campaigns.find((c) => String(c.id) === String(id));
+                    if (campaign?.subject) {
+                        this.bulkReply.replySubject = /^re:/i.test(campaign.subject)
+                            ? campaign.subject
+                            : ('Re: ' + campaign.subject);
+                    }
+
+                    this.bulkReply.recipientsLoading = true;
+                    try {
+                        const res = await fetch(@js(url('/api/imported-outreach')) + '/' + id + '/recipients', {
+                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                            credentials: 'same-origin',
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) throw new Error(data.message || 'Failed to load recipients.');
+                        this.bulkReply.recipients = data.data || [];
+                        this.bulkReply.replySubject = data.reply_subject || this.bulkReply.replySubject;
+                        this.bulkReply.selectedLeadIds = this.bulkReply.recipients.map((r) => r.imported_lead_id);
+                    } catch (e) {
+                        this.bulkReply.recipients = [];
+                        window.toast?.error(e.message || 'Failed to load recipients.');
+                    } finally {
+                        this.bulkReply.recipientsLoading = false;
+                    }
+                },
+
+                toggleBulkReplySelectAll(checked) {
+                    if (checked) {
+                        this.bulkReply.selectedLeadIds = this.bulkReply.recipients.map((r) => r.imported_lead_id);
+                    } else {
+                        this.bulkReply.selectedLeadIds = [];
+                    }
+                },
+
+                onBulkReplyFilesSelected(event) {
+                    const files = Array.from(event.target.files || []);
+                    this.bulkReply.files = this.filterBulkReplyFiles(files);
+                    event.target.value = '';
+                },
+
+                onBulkReplyDrop(event) {
+                    this.bulkReply.dragOver = false;
+                    const files = Array.from(event.dataTransfer?.files || []);
+                    this.bulkReply.files = this.filterBulkReplyFiles(files);
+                },
+
+                filterBulkReplyFiles(files) {
+                    const allowed = files.filter((f) => f.size <= 5 * 1024 * 1024);
+                    if (allowed.length !== files.length) {
+                        window.toast?.error('Each attachment must be 5 MB or less.');
+                    }
+                    return allowed;
+                },
+
+                async submitBulkReply() {
+                    if (this.bulkReply.submitting) return;
+                    if (!this.bulkReply.campaignId) {
+                        window.toast?.error('Select a previous campaign.');
+                        return;
+                    }
+                    if (this.bulkReply.selectedLeadIds.length === 0) {
+                        window.toast?.error('Select at least one recipient.');
+                        return;
+                    }
+                    const body = (this.bulkReply.body || '').trim();
+                    if (!body) {
+                        window.toast?.error('Reply body is required.');
+                        return;
+                    }
+
+                    this.bulkReply.submitting = true;
+                    try {
+                        const formData = new FormData();
+                        formData.append('parent_outreach_id', this.bulkReply.campaignId);
+                        formData.append('body_template', body);
+                        this.bulkReply.selectedLeadIds.forEach((id) => {
+                            formData.append('selected_lead_ids[]', id);
+                        });
+                        this.bulkReply.files.forEach((file) => {
+                            formData.append('attachments[]', file);
+                        });
+
+                        const res = await fetch(@js(url('/api/imported-outreach/bulk-reply')), {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            },
+                            credentials: 'same-origin',
+                            body: formData,
+                        });
+
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                            const firstError = data.errors
+                                ? Object.values(data.errors).flat()[0]
+                                : null;
+                            throw new Error(firstError || data.message || 'Failed to queue bulk reply.');
+                        }
+
+                        window.toast?.success(data.message || 'Bulk replies have been queued.');
+                        this.bulkReply.submitting = false;
+                        this.closeBulkReplyModal();
+                    } catch (e) {
+                        window.toast?.error(e.message || 'Failed to queue bulk reply.');
+                    } finally {
+                        this.bulkReply.submitting = false;
+                    }
                 },
 
                 applyTemplate() {
@@ -931,6 +1364,67 @@
                         window.toast?.error('Unable to load lead details.');
                     } finally {
                         this.detailLoading = false;
+                    }
+                },
+
+                async openThread(id) {
+                    this.threadOpen = true;
+                    this.threadLoading = true;
+                    this.threadData = null;
+                    this.threadLeadId = id;
+                    this.replyBody = '';
+                    this.replySending = false;
+                    try {
+                        const res = await fetch(@js(url('/imported-leads')) + '/' + id, {
+                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                            credentials: 'same-origin',
+                        });
+                        if (!res.ok) throw new Error('Failed to load');
+                        this.threadData = await res.json();
+                        this.$nextTick(() => {
+                            const el = this.$refs.threadScroll;
+                            if (el) el.scrollTop = el.scrollHeight;
+                        });
+                    } catch {
+                        this.threadOpen = false;
+                        window.toast?.error('Unable to load outreach thread.');
+                    } finally {
+                        this.threadLoading = false;
+                    }
+                },
+
+                async submitThreadReply() {
+                    const body = (this.replyBody || '').trim();
+                    if (!body || !this.threadLeadId || this.replySending) return;
+                    if (!this.outlookConnected) {
+                        window.toast?.error('Connect Outlook before sending a reply.');
+                        return;
+                    }
+
+                    this.replySending = true;
+                    try {
+                        const res = await fetch(@js(url('/imported-leads')) + '/' + this.threadLeadId + '/reply', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ body }),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                            throw new Error(data.message || 'Failed to send reply.');
+                        }
+                        this.replyBody = '';
+                        window.toast?.success(data.message || 'Reply sent.');
+                        await this.openThread(this.threadLeadId);
+                    } catch (e) {
+                        window.toast?.error(e.message || 'Failed to send reply.');
+                    } finally {
+                        this.replySending = false;
                     }
                 },
 
