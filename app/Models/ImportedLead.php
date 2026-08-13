@@ -22,6 +22,7 @@ class ImportedLead extends Model
         'import_batch_id',
         'organization_name',
         'contact_name',
+        'salutation',
         'address',
         'original_filename',
     ];

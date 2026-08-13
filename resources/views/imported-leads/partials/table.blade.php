@@ -44,6 +44,9 @@
                 </td>
                 <td class="px-3 py-4">
                     <div class="text-sm font-medium text-slate-700">{{ $lead->contact_name ?: '—' }}</div>
+                    @if($lead->salutation)
+                        <div class="text-[11px] text-slate-400 mt-0.5">{{ $lead->salutation }}</div>
+                    @endif
                 </td>
                 <td class="px-3 py-4">
                     @if(! $primaryEmail)

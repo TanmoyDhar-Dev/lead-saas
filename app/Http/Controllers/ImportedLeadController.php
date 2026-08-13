@@ -289,6 +289,7 @@ class ImportedLeadController extends Controller
             'id' => $importedLead->id,
             'organization_name' => $importedLead->organization_name,
             'contact_name' => $importedLead->contact_name,
+            'salutation' => $importedLead->salutation,
             'address' => $importedLead->address,
             'original_filename' => $importedLead->original_filename,
             'created_at' => optional($importedLead->created_at)->format('M d, Y H:i'),
@@ -468,6 +469,7 @@ class ImportedLeadController extends Controller
         $validated = $request->validate([
             'organization_name' => ['nullable', 'string', 'max:255'],
             'contact_name' => ['nullable', 'string', 'max:255'],
+            'salutation' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'string', 'max:2000'],
             'emails' => ['required', 'array', 'min:1'],
             'emails.*' => ['required', 'email', 'max:255'],
@@ -499,6 +501,7 @@ class ImportedLeadController extends Controller
             $importedLead->update([
                 'organization_name' => $validated['organization_name'] ?: null,
                 'contact_name' => $validated['contact_name'] ?: null,
+                'salutation' => $validated['salutation'] ?: null,
                 'address' => $validated['address'] ?: null,
             ]);
 

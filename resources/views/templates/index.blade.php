@@ -1,5 +1,4 @@
 @php
-    $systemSample = $templates->where('is_system_sample', true)->first();
     $userTemplates = $templates->where('is_system_sample', false);
 @endphp
 
@@ -20,13 +19,6 @@
     </x-slot>
 
     <div class="space-y-8 max-w-7xl mx-auto pb-10" x-data="templateManager()">
-
-        @if($systemSample)
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex justify-between items-center mb-6">
-                <span class="text-blue-800 text-sm font-medium">💡 <strong>Best Practice Guide:</strong> Not sure where to start? Check out our high-converting outreach sample.</span>
-                <button @click="openModal({{ json_encode($systemSample) }})" class="bg-white text-brand-blue border border-blue-200 px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors shadow-sm">View Sample</button>
-            </div>
-        @endif
 
         <div class="flex justify-end" x-show="selectedIds.length > 0" x-cloak>
             <button type="button" @click="bulkDeleteSelected()"

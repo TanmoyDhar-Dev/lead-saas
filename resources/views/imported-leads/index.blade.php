@@ -137,7 +137,7 @@
                         <svg class="mx-auto h-10 w-10 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
                         <p class="text-sm font-bold text-slate-700">Drag & drop your file here</p>
                         <p class="text-xs text-slate-400 mt-1">or click to select from your device</p>
-                        <p class="text-[10px] text-slate-400 mt-3 uppercase tracking-widest font-bold">Expected: Organization Name, MD/CEO, Email, Cell/Phone, Address</p>
+                        <p class="text-[10px] text-slate-400 mt-3 uppercase tracking-widest font-bold">Expected: Organization Name, MD/CEO, Salutation, Email, Cell/Phone, Address</p>
                     </div>
 
                     <div class="flex items-center justify-center gap-1 -mt-1 text-xs text-slate-500 font-medium">
@@ -324,7 +324,7 @@
                             <div>
                                 <label class="text-xs font-bold text-slate-400">Body *</label>
                                 <textarea name="body" x-model="outreachForm.body" rows="6" required class="w-full bg-slate-50 border-slate-200 rounded-xl mt-1 p-4 text-sm focus:ring-brand-blue focus:border-brand-blue"></textarea>
-                                <p class="text-[10px] text-slate-400 mt-1">Placeholders: @{{fullName}}, @{{companyName}}, @{{email}}, @{{address}}</p>
+                                <p class="text-[10px] text-slate-400 mt-1">Placeholders: @{{salutation}}, @{{fullName}}, @{{companyName}}, @{{email}}, @{{address}}</p>
                             </div>
 
                             <div>
@@ -382,6 +382,10 @@
                         <p class="text-sm font-medium text-slate-700 mt-1" x-text="detailData?.contact_name || '—'"></p>
                     </div>
                     <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Salutation</p>
+                        <p class="text-sm font-medium text-slate-700 mt-1" x-text="detailData?.salutation || '—'"></p>
+                    </div>
+                    <div>
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Address</p>
                         <p class="text-sm text-slate-600 mt-1" x-text="detailData?.address || '—'"></p>
                     </div>
@@ -436,6 +440,10 @@
                         <div>
                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Contact (MD/CEO)</label>
                             <input type="text" x-model="editForm.contact_name" class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm py-2.5 focus:ring-brand-blue focus:border-brand-blue">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Salutation</label>
+                            <input type="text" x-model="editForm.salutation" placeholder="Bhai / Apu / Bro" class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm py-2.5 focus:ring-brand-blue focus:border-brand-blue">
                         </div>
                         <div>
                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Address</label>
@@ -512,6 +520,7 @@
                 editForm: {
                     organization_name: '',
                     contact_name: '',
+                    salutation: '',
                     address: '',
                     emails: [''],
                     phones: [],
@@ -947,6 +956,7 @@
                         this.editForm = {
                             organization_name: data.organization_name || '',
                             contact_name: data.contact_name || '',
+                            salutation: data.salutation || '',
                             address: data.address || '',
                             emails: (data.emails || []).map(e => e.email),
                             phones: (data.phones || []).map(p => p.phone),
@@ -965,6 +975,7 @@
                     const payload = {
                         organization_name: this.editForm.organization_name,
                         contact_name: this.editForm.contact_name,
+                        salutation: this.editForm.salutation,
                         address: this.editForm.address,
                         emails: this.editForm.emails.filter(e => e && e.trim()),
                         phones: this.editForm.phones.filter(p => p && p.trim()),

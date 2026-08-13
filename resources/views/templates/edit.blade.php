@@ -46,7 +46,7 @@
                     </div>
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Email Body *</label>
-                        <textarea name="body" rows="10" required class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm py-4 px-4 focus:ring-brand-blue focus:border-brand-blue custom-scrollbar transition-all" placeholder="Hi {first_name}...">{{ old('body', $template->body) }}</textarea>
+                        <textarea name="body" rows="10" required class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm py-4 px-4 focus:ring-brand-blue focus:border-brand-blue custom-scrollbar transition-all" placeholder="Hi @{{salutation}}...">{{ old('body', $template->body) }}</textarea>
                     </div>
                 </div>
 

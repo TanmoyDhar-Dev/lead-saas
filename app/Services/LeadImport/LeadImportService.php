@@ -84,6 +84,7 @@ class LeadImportService
                             'import_batch_id' => $batch->id,
                             'organization_name' => $row['organization_name'],
                             'contact_name' => $row['contact_name'],
+                            'salutation' => $row['salutation'] ?? null,
                             'address' => $row['address'],
                             'original_filename' => $file->getClientOriginalName(),
                         ]);

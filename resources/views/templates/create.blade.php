@@ -42,7 +42,7 @@
                             </div>
                             <div>
                                 <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Email Body *</label>
-                                <textarea name="body" rows="10" required class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm py-4 px-4 focus:ring-brand-blue focus:border-brand-blue custom-scrollbar transition-all" placeholder="Hi {first_name}...">{{ old('body') }}</textarea>
+                                <textarea name="body" rows="10" required class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm py-4 px-4 focus:ring-brand-blue focus:border-brand-blue custom-scrollbar transition-all" placeholder="Hi @{{salutation}}...">{{ old('body') }}</textarea>
                             </div>
                         </div>
 
@@ -87,8 +87,9 @@
                     
                     <div class="mb-6">
                         <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Usable Variables</h4>
-                        <ul class="space-y-2 text-sm text-slate-600">
+                        <ul class="space-y-2 text-sm text-slate-600">                          
                             <li class="flex items-center"><code class="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-brand-blue text-xs mr-2">@{{fullName}}</code> Recipient's Full Name</li>
+                            <li class="flex items-center"><code class="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-brand-blue text-xs mr-2">@{{salutation}}</code> Greeting (Bhai / Apu)</li>
                             <li class="flex items-center"><code class="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-brand-blue text-xs mr-2">@{{companyName}}</code> Recipient's Company</li>
                             <li class="flex items-center"><code class="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-brand-blue text-xs mr-2">@{{hyperline}}</code> AI Personalization</li>
                         </ul>
@@ -98,7 +99,7 @@
                         <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Example Outreach</h4>
                         <div class="whitespace-pre-wrap text-sm text-gray-700 bg-white p-3 rounded border border-gray-200"><strong>Subject:</strong> Quick question regarding @{{companyName}}
 
-Hi @{{fullName}},
+Hi @{{fullName}} @{{salutation}},
 
 @{{hyperline}}
 

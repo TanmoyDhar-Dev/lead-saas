@@ -20,6 +20,7 @@ class SpreadsheetParser
     private const HEADER_ALIASES = [
         'organization_name' => ['organization name', 'organization', 'company', 'company name', 'org name'],
         'contact_name' => ['md/ceo', 'md / ceo', 'ceo', 'md', 'name', 'full name', 'contact', 'contact name'],
+        'salutation' => ['salutation', 'greeting', 'title', 'honorific', 'bhai/apu', 'bhai / apu', 'bhai', 'apu', 'bro'],
         'emails' => ['email', 'emails', 'e-mail', 'e-mails', 'email address', 'email addresses'],
         'phones' => ['cell/phone', 'cell / phone', 'cell', 'phone', 'phones', 'mobile', 'telephone'],
         'address' => ['address', 'company address', 'location'],
@@ -87,7 +88,7 @@ class SpreadsheetParser
 
     /**
      * @param  list<string>  $headers
-     * @return array{organization_name: int|null, contact_name: int|null, emails: int|null, phones: int|null, address: int|null}
+     * @return array{organization_name: int|null, contact_name: int|null, salutation: int|null, emails: int|null, phones: int|null, address: int|null}
      */
     public function buildColumnMap(array $headers): array
     {
@@ -100,6 +101,7 @@ class SpreadsheetParser
         $map = [
             'organization_name' => null,
             'contact_name' => null,
+            'salutation' => null,
             'emails' => null,
             'phones' => null,
             'address' => null,
@@ -126,8 +128,8 @@ class SpreadsheetParser
 
     /**
      * @param  array<int, mixed>  $row
-     * @param  array{organization_name: int|null, contact_name: int|null, emails: int|null, phones: int|null, address: int|null}  $map
-     * @return array{organization_name: ?string, contact_name: ?string, emails: list<string>, invalid_emails: list<string>, phones: list<string>, address: ?string}
+     * @param  array{organization_name: int|null, contact_name: int|null, salutation: int|null, emails: int|null, phones: int|null, address: int|null}  $map
+     * @return array{organization_name: ?string, contact_name: ?string, salutation: ?string, emails: list<string>, invalid_emails: list<string>, phones: list<string>, address: ?string}
      */
     private function mapRow(array $row, array $map): array
     {
@@ -149,6 +151,7 @@ class SpreadsheetParser
         return [
             'organization_name' => $this->sanitizer->cleanText($get($map['organization_name'])),
             'contact_name' => $this->sanitizer->cleanText($get($map['contact_name'])),
+            'salutation' => $this->sanitizer->cleanText($get($map['salutation'])),
             'emails' => $emailResult['emails'],
             'invalid_emails' => $emailResult['invalid'],
             'phones' => $this->sanitizer->extractPhones($get($map['phones'])),

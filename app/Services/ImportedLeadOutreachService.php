@@ -458,6 +458,7 @@ class ImportedLeadOutreachService
         $map = [
             '{{fullName}}' => (string) ($lead->contact_name ?? ''),
             '{{contactName}}' => (string) ($lead->contact_name ?? ''),
+            '{{salutation}}' => (string) ($lead->salutation ?? ''),
             '{{companyName}}' => (string) ($lead->organization_name ?? ''),
             '{{organizationName}}' => (string) ($lead->organization_name ?? ''),
             '{{email}}' => $email,
