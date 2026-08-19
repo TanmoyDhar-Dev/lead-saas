@@ -89,7 +89,8 @@
                         <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Usable Variables</h4>
                         <ul class="space-y-2 text-sm text-slate-600">                          
                             <li class="flex items-center"><code class="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-brand-blue text-xs mr-2">@{{fullName}}</code> Recipient's Full Name</li>
-                            <li class="flex items-center"><code class="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-brand-blue text-xs mr-2">@{{salutation}}</code> Greeting (Bhai / Apu)</li>
+                            <li class="flex items-center"><code class="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-brand-blue text-xs mr-2">@{{salutation}}</code> Greeting (Bhai / Apu
+                                )</li>
                             <li class="flex items-center"><code class="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-brand-blue text-xs mr-2">@{{companyName}}</code> Recipient's Company</li>
                             <li class="flex items-center"><code class="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-brand-blue text-xs mr-2">@{{hyperline}}</code> AI Personalization</li>
                         </ul>

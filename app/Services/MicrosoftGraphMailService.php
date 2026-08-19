@@ -76,13 +76,20 @@ class MicrosoftGraphMailService
             ];
         }
 
+        // /send moves the draft to Sent Items and assigns a new Graph id.
+        // Bulk reply must use that Sent Items id, not the now-invalid draft id.
+        $sentMessageId = $this->resolveSentItemsMessageId(
+            $accessToken,
+            is_string($internetMessageId) ? $internetMessageId : null
+        );
+
         return [
             'successful' => true,
             'status' => $sendResult['status'],
             'body' => $created['body'],
             'error' => null,
             'internet_message_id' => is_string($internetMessageId) ? $internetMessageId : null,
-            'graph_message_id' => $graphMessageId,
+            'graph_message_id' => $sentMessageId ?? $graphMessageId,
         ];
     }
 
@@ -212,21 +219,80 @@ class MicrosoftGraphMailService
             []
         );
 
+        $sentMessageId = $sendResult['successful']
+            ? $this->resolveSentItemsMessageId(
+                $accessToken,
+                is_string($internetMessageId) ? $internetMessageId : null
+            )
+            : null;
+
         return [
             'successful' => $sendResult['successful'],
             'status' => $sendResult['status'],
             'body' => $created['body'],
             'error' => $sendResult['error'],
             'internet_message_id' => is_string($internetMessageId) ? $internetMessageId : null,
-            'graph_message_id' => $draftId,
+            'graph_message_id' => $sentMessageId ?? $draftId,
             'subject' => is_string($subject) ? $subject : null,
         ];
+    }
+
+    /**
+     * After /send, Graph assigns a new id in Sent Items. Look it up by internetMessageId.
+     */
+    public function resolveSentItemsMessageId(string $accessToken, ?string $internetMessageId, int $attempts = 5): ?string
+    {
+        $normalized = $this->normalizeInternetMessageId((string) $internetMessageId);
+        if ($normalized === null) {
+            return null;
+        }
+
+        for ($attempt = 1; $attempt <= max(1, $attempts); $attempt++) {
+            $found = $this->findMessageIdByInternetMessageId($accessToken, $normalized);
+            if ($found !== null) {
+                return $found;
+            }
+
+            if ($attempt < $attempts) {
+                usleep(400000);
+            }
+        }
+
+        return null;
     }
 
     /**
      * Resolve a Graph message id from an RFC 2822 internetMessageId (with or without brackets).
      */
     public function findMessageIdByInternetMessageId(string $accessToken, string $internetMessageId): ?string
+    {
+        $normalized = $this->normalizeInternetMessageId($internetMessageId);
+        if ($normalized === null) {
+            return null;
+        }
+
+        $escaped = str_replace("'", "''", $normalized);
+        $filter = rawurlencode("internetMessageId eq '{$escaped}'");
+
+        foreach ([
+            'https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$filter='.$filter.'&$select=id&$top=1',
+            'https://graph.microsoft.com/v1.0/me/messages?$filter='.$filter.'&$select=id&$top=1',
+        ] as $url) {
+            $result = $this->get($accessToken, $url);
+            if (! $result['successful'] || ! is_array($result['body'])) {
+                continue;
+            }
+
+            $first = $result['body']['value'][0]['id'] ?? null;
+            if (is_string($first) && $first !== '') {
+                return $first;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeInternetMessageId(string $internetMessageId): ?string
     {
         $normalized = trim($internetMessageId);
         if ($normalized === '') {
@@ -240,20 +306,7 @@ class MicrosoftGraphMailService
             $normalized .= '>';
         }
 
-        $escaped = str_replace("'", "''", $normalized);
-        $url = 'https://graph.microsoft.com/v1.0/me/messages'
-            .'?$filter='.rawurlencode("internetMessageId eq '{$escaped}'")
-            .'&$select=id'
-            .'&$top=1';
-
-        $result = $this->get($accessToken, $url);
-        if (! $result['successful'] || ! is_array($result['body'])) {
-            return null;
-        }
-
-        $first = $result['body']['value'][0]['id'] ?? null;
-
-        return is_string($first) && $first !== '' ? $first : null;
+        return $normalized;
     }
 
     /**

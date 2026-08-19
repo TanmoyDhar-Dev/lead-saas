@@ -7,6 +7,7 @@ use App\Exceptions\GraphRateLimitedException;
 use App\Models\ConnectedMailbox;
 use App\Models\ImportedOutreach;
 use App\Models\ImportedOutreachRecipient;
+use App\Services\MicrosoftGraphMailService;
 use App\Support\EmailTracking;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -36,7 +37,7 @@ class ProcessBulkReplyJob implements ShouldQueue
         public ImportedOutreachRecipient $recipient,
     ) {}
 
-    public function handle(): void
+    public function handle(MicrosoftGraphMailService $graphMail): void
     {
         $this->recipient->refresh();
 
@@ -51,12 +52,21 @@ class ProcessBulkReplyJob implements ShouldQueue
             return;
         }
 
-        $originalGraphMessageId = $this->resolveOriginalGraphMessageId($childOutreach);
-        if ($originalGraphMessageId === null) {
-            $this->markFailed('Original Graph message id was not found for threaded reply.');
+        $parentRecipient = $this->parentRecipient($childOutreach);
+        if ($parentRecipient === null) {
+            $this->markFailed('Original outreach recipient was not found for threaded reply.');
 
             return;
         }
+
+        $toEmail = trim((string) $this->recipient->to_email);
+        if ($toEmail === '') {
+            $this->markFailed('Recipient email address is missing for bulk reply.');
+
+            return;
+        }
+
+        $ccEmails = is_array($this->recipient->cc_emails) ? $this->recipient->cc_emails : [];
 
         $mailbox = ConnectedMailbox::query()
             ->where('user_id', $childOutreach->user_id)
@@ -77,6 +87,16 @@ class ProcessBulkReplyJob implements ShouldQueue
             return;
         }
 
+        $replyTarget = $this->resolveReplyTarget($graphMail, $accessToken, $parentRecipient);
+        if ($replyTarget === null) {
+            $this->markFailed('Original Graph message id was not found for threaded reply.');
+
+            return;
+        }
+
+        $originalGraphMessageId = $replyTarget['graph_message_id'];
+        $forceRecipients = $replyTarget['force_recipients'];
+
         if (! filled($this->recipient->tracking_id)) {
             $this->recipient->forceFill([
                 'tracking_id' => (string) Str::uuid(),
@@ -88,23 +108,67 @@ class ProcessBulkReplyJob implements ShouldQueue
             (string) $this->recipient->tracking_id
         );
 
-        // Step 1: createReply (Safeguard B — 404 ghost emails)
+        // Step 1: createReply (prefer inbound lead message; force To when replying to Sent Items)
         try {
-            $draftId = $this->createReplyDraft($accessToken, $originalGraphMessageId, $htmlBody);
+            $draftId = $this->createReplyDraft(
+                $accessToken,
+                $originalGraphMessageId,
+                $htmlBody,
+                $toEmail,
+                $ccEmails,
+                $forceRecipients
+            );
         } catch (GraphRateLimitedException $e) {
             $this->releaseAfterThrottle($e->retryAfterSeconds);
 
             return;
         } catch (GraphNotFoundException $e) {
-            Log::warning('Bulk reply aborted: original Graph message missing (404).', [
-                'recipient_id' => $this->recipient->id,
-                'original_graph_message_id' => $originalGraphMessageId,
-                'error' => $e->getMessage(),
-            ]);
+            $resolvedTarget = $this->resolveReplyTarget(
+                $graphMail,
+                $accessToken,
+                $parentRecipient,
+                refreshSentItemsId: true
+            );
 
-            $this->markFailed('Original email deleted from Sent Items');
+            if ($resolvedTarget !== null && $resolvedTarget['graph_message_id'] !== $originalGraphMessageId) {
+                try {
+                    $draftId = $this->createReplyDraft(
+                        $accessToken,
+                        $resolvedTarget['graph_message_id'],
+                        $htmlBody,
+                        $toEmail,
+                        $ccEmails,
+                        $resolvedTarget['force_recipients']
+                    );
+                    $originalGraphMessageId = $resolvedTarget['graph_message_id'];
+                    $forceRecipients = $resolvedTarget['force_recipients'];
+                } catch (GraphRateLimitedException $throttled) {
+                    $this->releaseAfterThrottle($throttled->retryAfterSeconds);
 
-            return;
+                    return;
+                } catch (Throwable $retryError) {
+                    Log::warning('Bulk reply aborted after reply target retry.', [
+                        'recipient_id' => $this->recipient->id,
+                        'original_graph_message_id' => $originalGraphMessageId,
+                        'resolved_graph_message_id' => $resolvedTarget['graph_message_id'],
+                        'error' => $retryError->getMessage(),
+                    ]);
+
+                    $this->markFailed('Could not find the original outreach in Outlook to reply to.');
+
+                    return;
+                }
+            } else {
+                Log::warning('Bulk reply aborted: reply target Graph message missing (404).', [
+                    'recipient_id' => $this->recipient->id,
+                    'original_graph_message_id' => $originalGraphMessageId,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $this->markFailed('Could not find the original outreach in Outlook to reply to.');
+
+                return;
+            }
         } catch (Throwable $e) {
             $this->markFailed($e->getMessage());
 
@@ -152,29 +216,110 @@ class ProcessBulkReplyJob implements ShouldQueue
             'recipient_id' => $this->recipient->id,
             'graph_message_id' => $draftId,
             'original_graph_message_id' => $originalGraphMessageId,
+            'to_email' => $toEmail,
+            'forced_recipients' => $forceRecipients,
         ]);
     }
 
-    private function resolveOriginalGraphMessageId(ImportedOutreach $childOutreach): ?string
+    /**
+     * @return array{graph_message_id: string, force_recipients: bool}|null
+     */
+    private function resolveReplyTarget(
+        MicrosoftGraphMailService $graphMail,
+        string $accessToken,
+        ImportedOutreachRecipient $parentRecipient,
+        bool $refreshSentItemsId = false,
+    ): ?array {
+        $parentRecipient->loadMissing('inboundMessages');
+
+        $latestInbound = $parentRecipient->inboundMessages
+            ->sortByDesc(fn ($inbound) => optional($inbound->received_at ?? $inbound->created_at)?->getTimestamp() ?? 0)
+            ->first();
+
+        $inboundGraphId = is_string($latestInbound?->graph_message_id)
+            ? trim($latestInbound->graph_message_id)
+            : '';
+
+        if ($inboundGraphId !== '') {
+            return [
+                'graph_message_id' => $inboundGraphId,
+                'force_recipients' => false,
+            ];
+        }
+
+        if ($refreshSentItemsId) {
+            $this->refreshParentGraphMessageId($graphMail, $accessToken, $parentRecipient);
+            $parentRecipient->refresh();
+        }
+
+        $sentGraphId = $this->graphIdFromRecipient($parentRecipient);
+        if ($sentGraphId === null) {
+            $sentGraphId = $this->refreshParentGraphMessageId($graphMail, $accessToken, $parentRecipient);
+        }
+
+        if ($sentGraphId === null) {
+            return null;
+        }
+
+        // createReply on a Sent Items message replies to its sender (you). Override To to the lead.
+        return [
+            'graph_message_id' => $sentGraphId,
+            'force_recipients' => true,
+        ];
+    }
+
+    private function parentRecipient(ImportedOutreach $childOutreach): ?ImportedOutreachRecipient
     {
         $parent = $childOutreach->parent;
         if ($parent === null) {
             return null;
         }
 
-        $parentRecipient = ImportedOutreachRecipient::query()
+        return ImportedOutreachRecipient::query()
             ->where('imported_outreach_id', $parent->id)
             ->where('imported_lead_id', $this->recipient->imported_lead_id)
-            ->whereNotNull('graph_message_id')
+            ->where(function ($query) {
+                $query->whereNotNull('graph_message_id')
+                    ->orWhereNotNull('message_id')
+                    ->orWhereHas('inboundMessages', fn ($q) => $q->whereNotNull('graph_message_id'));
+            })
             ->orderByDesc('sent_at')
             ->orderByDesc('created_at')
             ->first();
+    }
 
+    private function graphIdFromRecipient(?ImportedOutreachRecipient $parentRecipient): ?string
+    {
         $graphMessageId = is_string($parentRecipient?->graph_message_id)
             ? trim($parentRecipient->graph_message_id)
             : '';
 
         return $graphMessageId !== '' ? $graphMessageId : null;
+    }
+
+    private function refreshParentGraphMessageId(
+        MicrosoftGraphMailService $graphMail,
+        string $accessToken,
+        ?ImportedOutreachRecipient $parentRecipient,
+    ): ?string {
+        $internetMessageId = is_string($parentRecipient?->message_id)
+            ? trim($parentRecipient->message_id)
+            : '';
+
+        if ($internetMessageId === '') {
+            return null;
+        }
+
+        $resolvedId = $graphMail->findMessageIdByInternetMessageId($accessToken, $internetMessageId);
+        if ($resolvedId === null) {
+            return null;
+        }
+
+        if ($parentRecipient->graph_message_id !== $resolvedId) {
+            $parentRecipient->update(['graph_message_id' => $resolvedId]);
+        }
+
+        return $resolvedId;
     }
 
     private function buildReplyHtml(ImportedOutreach $childOutreach): string
@@ -201,17 +346,24 @@ class ProcessBulkReplyJob implements ShouldQueue
     /**
      * POST /me/messages/{id}/createReply then ensure HTML body via PATCH.
      *
+     * @param  list<string>  $ccEmails
+     *
      * @throws GraphNotFoundException
      * @throws GraphRateLimitedException
      * @throws RuntimeException
      */
-    private function createReplyDraft(string $accessToken, string $originalGraphMessageId, string $htmlBody): string
-    {
+    private function createReplyDraft(
+        string $accessToken,
+        string $originalGraphMessageId,
+        string $htmlBody,
+        string $toEmail,
+        array $ccEmails = [],
+        bool $forceRecipients = false,
+    ): string {
         $url = 'https://graph.microsoft.com/v1.0/me/messages/'
             .rawurlencode($originalGraphMessageId)
             .'/createReply';
 
-        // Prefer embedding body on createReply; PATCH below is the reliable fallback.
         $response = $this->graphPost($accessToken, $url, [
             'message' => [
                 'body' => [
@@ -228,15 +380,41 @@ class ProcessBulkReplyJob implements ShouldQueue
             throw new RuntimeException('Graph createReply succeeded but returned no draft id.');
         }
 
+        $patchPayload = [
+            'body' => [
+                'contentType' => 'HTML',
+                'content' => $htmlBody,
+            ],
+        ];
+
+        if ($forceRecipients) {
+            $patchPayload['toRecipients'] = [[
+                'emailAddress' => [
+                    'address' => $toEmail,
+                ],
+            ]];
+
+            $cc = array_values(array_filter(
+                $ccEmails,
+                fn ($email) => is_string($email) && trim($email) !== '' && strtolower(trim($email)) !== strtolower($toEmail)
+            ));
+
+            if ($cc !== []) {
+                $patchPayload['ccRecipients'] = array_map(
+                    fn (string $email) => [
+                        'emailAddress' => [
+                            'address' => trim($email),
+                        ],
+                    ],
+                    $cc
+                );
+            }
+        }
+
         $patch = $this->graphPatch(
             $accessToken,
             'https://graph.microsoft.com/v1.0/me/messages/'.rawurlencode($draftId),
-            [
-                'body' => [
-                    'contentType' => 'HTML',
-                    'content' => $htmlBody,
-                ],
-            ]
+            $patchPayload
         );
 
         $this->throwIfGraphError($patch, 'patch reply body');
