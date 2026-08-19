@@ -153,6 +153,44 @@ class ImportedLeadController extends Controller
         ));
     }
 
+    public function validateImport(Request $request, LeadImportService $importService)
+    {
+        $validated = $request->validate([
+            'file' => ['required', 'file', 'max:10240'],
+        ], [
+            'file.required' => 'Please choose a CSV or Excel file.',
+            'file.max' => 'File size must be 10 MB or less.',
+        ]);
+
+        $file = $request->file('file');
+        $extension = strtolower((string) $file->getClientOriginalExtension());
+        if (! in_array($extension, ['csv', 'xlsx', 'xls'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only CSV, XLSX, and XLS files are allowed.',
+            ], 422);
+        }
+
+        try {
+            $missingData = $importService->detectMissingDataIssues($file);
+        } catch (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'missing_issues' => $missingData['issues'],
+            'missing_issue_rows' => $missingData['issue_rows'],
+            'total_rows' => $missingData['total_rows'],
+            'valid_count' => $missingData['valid_count'],
+            'skip_count' => $missingData['skip_count'],
+            'missing_truncated' => $missingData['truncated'],
+        ]);
+    }
+
     public function import(Request $request, LeadImportService $importService)
     {
         $validated = $request->validate([

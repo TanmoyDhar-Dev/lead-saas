@@ -137,7 +137,7 @@
                         <svg class="mx-auto h-10 w-10 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
                         <p class="text-sm font-bold text-slate-700">Drag & drop your file here</p>
                         <p class="text-xs text-slate-400 mt-1">or click to select from your device</p>
-                        <p class="text-[10px] text-slate-400 mt-3 uppercase tracking-widest font-bold">Expected: Organization Name, MD/CEO, Salutation, Email, Cell/Phone, Address</p>
+                        <p class="text-[10px] text-slate-400 mt-3 uppercase tracking-widest font-bold">Expected: MD/CEO, Email (required) · Organization Name, Salutation, Cell/Phone, Address (optional)</p>
                     </div>
 
                     <div class="flex items-center justify-center gap-1 -mt-1 text-xs text-slate-500 font-medium">
@@ -840,50 +840,119 @@
                     }
                     this.selectedFile = file;
                 },
-                async submitImport() {
-                    if (!this.selectedFile || this.importing) return;
-                    this.importing = true;
-
+                buildImportFormData() {
                     const formData = new FormData();
                     formData.append('file', this.selectedFile);
                     this.importCategoryIds.forEach(id => formData.append('category_ids[]', id));
                     this.importCategoryNames.forEach(name => formData.append('category_names[]', name));
+                    return formData;
+                },
+                importRequestHeaders() {
+                    return {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    };
+                },
+                escapeHtml(value) {
+                    return String(value ?? '')
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+                },
+                async checkImportMissingData() {
+                    const res = await fetch(@js(route('imported-leads.import.validate')), {
+                        method: 'POST',
+                        headers: this.importRequestHeaders(),
+                        body: this.buildImportFormData(),
+                        credentials: 'same-origin',
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) {
+                        throw new Error(data.message || Object.values(data.errors || {}).flat()[0] || 'Import validation failed.');
+                    }
+
+                    return {
+                        issues: Array.isArray(data.missing_issues) ? data.missing_issues : [],
+                        issueRows: Number(data.missing_issue_rows) || 0,
+                        totalRows: Number(data.total_rows) || 0,
+                        validCount: Number(data.valid_count) || 0,
+                        skipCount: Number(data.skip_count) || 0,
+                        truncated: Boolean(data.missing_truncated),
+                    };
+                },
+                async performImport() {
+                    const res = await fetch(@js(route('imported-leads.import')), {
+                        method: 'POST',
+                        headers: this.importRequestHeaders(),
+                        body: this.buildImportFormData(),
+                        credentials: 'same-origin',
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) {
+                        throw new Error(data.message || Object.values(data.errors || {}).flat()[0] || 'Import failed.');
+                    }
+
+                    window.toast?.success(data.message || 'Import complete.');
+
+                    if (Array.isArray(data.categories)) {
+                        this.categories = data.categories;
+                    }
+                    this.clearFile();
+                    this.importCategoryIds = [];
+                    this.importCategoryNames = [];
+                    this.importCategorySearch = '';
+                    this.importCategoryDropdownOpen = false;
+                    await this.fetchLeads();
+                    this.closeImportModal();
+                },
+                async submitImport() {
+                    if (!this.selectedFile || this.importing) return;
 
                     try {
-                        const res = await fetch(@js(route('imported-leads.import')), {
-                            method: 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Accept': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                            },
-                            body: formData,
-                            credentials: 'same-origin',
-                        });
-                        const data = await res.json();
-                        if (!res.ok || !data.success) {
-                            throw new Error(data.message || Object.values(data.errors || {}).flat()[0] || 'Import failed.');
-                        }
+                        this.importing = true;
+                        const missingData = await this.checkImportMissingData();
+                        const missingIssues = missingData.issues;
 
-                        window.toast?.success(data.message || 'Import complete.');
-                        if (Array.isArray(data.error_samples) && data.error_samples.length > 0) {
-                            window.toast?.importErrors(data.error_samples, {
-                                title: data.skipped > 0
-                                    ? `Import issues (${data.skipped} skipped)`
-                                    : 'Import error report',
+                        if (missingIssues.length > 0) {
+                            this.importing = false;
+                            const issueList = missingIssues
+                                .map((issue) => {
+                                    const cols = (issue.columns || []).map(c => this.escapeHtml(c)).join(', ');
+                                    return `<li>Row ${issue.row} has missing ${cols}</li>`;
+                                })
+                                .join('');
+                            const moreHtml = missingData.truncated
+                                ? `<span class="lf-swal-missing-more">+${missingData.totalRows - missingIssues.length} more rows not shown</span>`
+                                : '';
+
+                            const statsHtml = `<div class="lf-swal-missing-stats">`
+                                + `<span class="lf-swal-stat lf-swal-stat--valid"><strong>${missingData.validCount}</strong> valid lead${missingData.validCount !== 1 ? 's' : ''} will be imported </span>`
+                                + `<span class="lf-swal-stat lf-swal-stat--skip"><strong>${missingData.skipCount}</strong> lead${missingData.skipCount !== 1 ? 's' : ''} will be skipped</span>`
+                                + `</div>`;
+
+                            const result = await window.Swal.fire({
+                                icon: 'warning',
+                                title: 'Missing Data Detected',
+                                html: statsHtml
+                                    + `<span class="lf-swal-missing-intro">The following rows have missing data:</span>`
+                                    + `<ul class="lf-swal-missing-list">${issueList}</ul>${moreHtml}`
+                                    + `<span class="lf-swal-missing-footer">Do you want to proceed anyway?</span>`,
+                                showCancelButton: true,
+                                confirmButtonText: 'Yes, proceed',
+                                cancelButtonText: 'No, cancel',
                             });
+
+                            if (!result.isConfirmed) {
+                                return;
+                            }
+
+                            this.importing = true;
                         }
 
-                        if (Array.isArray(data.categories)) {
-                            this.categories = data.categories;
-                        }
-                        this.clearFile();
-                        this.importCategoryIds = [];
-                        this.importCategoryNames = [];
-                        this.importCategorySearch = '';
-                        this.importCategoryDropdownOpen = false;
-                        await this.fetchLeads();
-                        this.closeImportModal();
+                        await this.performImport();
                     } catch (err) {
                         window.toast?.error(err.message || 'Import failed.');
                     } finally {

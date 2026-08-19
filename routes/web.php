@@ -84,6 +84,7 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     Route::get('/imported-leads/threads', [ImportedLeadController::class, 'threads'])->name('imported-leads.threads');
     Route::get('/imported-leads/bulk-reply', [ImportedLeadOutreachController::class, 'bulkReplyPage'])->name('imported-leads.bulk-reply');
     Route::get('/imported-leads/import/template', [ImportedLeadController::class, 'downloadImportTemplate'])->name('leads.import.template.download');
+    Route::post('/imported-leads/import/validate', [ImportedLeadController::class, 'validateImport'])->name('imported-leads.import.validate');
     Route::post('/imported-leads/import', [ImportedLeadController::class, 'import'])->name('imported-leads.import');
     Route::post('/imported-leads/outreach', [ImportedLeadOutreachController::class, 'dispatch'])->name('imported-leads.outreach');
     Route::post('/imported-leads/{importedLead}/reply', [ImportedLeadOutreachController::class, 'reply'])->name('imported-leads.reply');

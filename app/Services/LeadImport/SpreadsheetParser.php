@@ -58,8 +58,12 @@ class SpreadsheetParser
         $headers = array_map(fn ($h) => trim((string) $h), array_shift($rows));
         $map = $this->buildColumnMap($headers);
 
-        if ($map['organization_name'] === null && $map['contact_name'] === null && $map['emails'] === null) {
-            throw new RuntimeException('Could not detect required columns (Organization Name, MD/CEO, or Email).');
+        // Organization column is optional; require at least Contact (MD/CEO) or Email.
+        // if ($map['organization_name'] === null && $map['contact_name'] === null && $map['emails'] === null) {
+        //     throw new RuntimeException('Could not detect required columns (Organization Name, MD/CEO, or Email).');
+        // }
+        if ($map['contact_name'] === null && $map['emails'] === null) {
+            throw new RuntimeException('Could not detect required columns (MD/CEO or Email).');
         }
 
         $dataRows = [];

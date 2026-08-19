@@ -12,9 +12,101 @@ use Throwable;
 
 class LeadImportService
 {
+    /**
+     * Human-readable labels for mapped import columns.
+     *
+     * @var array<string, string>
+     */
+    private const COLUMN_LABELS = [
+        'organization_name' => 'Organization Name',
+        'contact_name' => 'Contact Name (MD/CEO)',
+        'salutation' => 'Salutation',
+        'emails' => 'Email',
+        'phones' => 'Phone',
+        'address' => 'Address',
+    ];
+
+    private const MAX_MISSING_ISSUES = 250;
+
     public function __construct(
         private readonly SpreadsheetParser $parser = new SpreadsheetParser,
     ) {}
+
+    /**
+     * Detect missing data grouped by row, plus valid/skip counts.
+     *
+     * @return array{issues: list<array{row: int, columns: list<string>}>, total_rows: int, valid_count: int, skip_count: int, truncated: bool}
+     */
+    public function detectMissingDataIssues(UploadedFile $file): array
+    {
+        $parsed = $this->parser->parse($file);
+        $rows = $parsed['rows'];
+        $map = $parsed['map'];
+        $headers = $parsed['headers'];
+        $issues = [];
+        $skipCount = 0;
+
+        foreach ($rows as $index => $row) {
+            $rowNumber = $index + 2;
+            $missingColumns = [];
+
+            foreach (self::COLUMN_LABELS as $field => $label) {
+                $columnIndex = $map[$field];
+                if ($columnIndex === null) {
+                    continue;
+                }
+
+                if ($this->rowValueIsEmpty($row, $field)) {
+                    $headerName = isset($headers[$columnIndex]) ? trim((string) $headers[$columnIndex]) : '';
+                    $missingColumns[] = $headerName !== '' ? $headerName : $label;
+                }
+            }
+
+            if ($missingColumns !== []) {
+                $issues[] = [
+                    'row' => $rowNumber,
+                    'columns' => $missingColumns,
+                ];
+            }
+
+            $willSkip = ($row['contact_name'] ?? null) === null
+                || ($row['emails'] ?? []) === [];
+            if ($willSkip) {
+                $skipCount++;
+            }
+        }
+
+        $totalRows = count($rows);
+        $issueRows = count($issues);
+        $truncated = $issueRows > self::MAX_MISSING_ISSUES;
+
+        if ($truncated) {
+            $issues = array_slice($issues, 0, self::MAX_MISSING_ISSUES);
+        }
+
+        return [
+            'issues' => $issues,
+            'issue_rows' => $issueRows,
+            'total_rows' => $totalRows,
+            'valid_count' => $totalRows - $skipCount,
+            'skip_count' => $skipCount,
+            'truncated' => $truncated,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function rowValueIsEmpty(array $row, string $field): bool
+    {
+        if ($field === 'emails' || $field === 'phones') {
+            return ($row[$field] ?? []) === [];
+        }
+
+        $value = $row[$field] ?? null;
+
+        return $value === null || trim((string) $value) === '';
+    }
 
     /**
      * @param  list<string>  $categoryIds
@@ -47,11 +139,12 @@ class LeadImportService
                 $rowNumber = $index + 2; // header is row 1
 
                 try {
-                    if (($row['organization_name'] ?? null) === null) {
-                        $skipped++;
-                        $this->pushError($errorSamples, $rowNumber, 'Missing organization name.');
-                        continue;
-                    }
+                    // Organization is optional during import (previously required per row).
+                    // if (($row['organization_name'] ?? null) === null) {
+                    //     $skipped++;
+                    //     $this->pushError($errorSamples, $rowNumber, 'Missing organization name.');
+                    //     continue;
+                    // }
 
                     if (($row['contact_name'] ?? null) === null) {
                         $skipped++;
@@ -82,7 +175,7 @@ class LeadImportService
                         $lead = ImportedLead::create([
                             'user_id' => $user->id,
                             'import_batch_id' => $batch->id,
-                            'organization_name' => $row['organization_name'],
+                            'organization_name' => $row['organization_name'] ?? null,
                             'contact_name' => $row['contact_name'],
                             'salutation' => $row['salutation'] ?? null,
                             'address' => $row['address'],
