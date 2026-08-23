@@ -22,6 +22,7 @@ class LeadImportService
         'contact_name' => 'Contact Name (MD/CEO)',
         'salutation' => 'Salutation',
         'emails' => 'Email',
+        'cc_emails' => 'CC Email',
         'phones' => 'Phone',
         'address' => 'Address',
     ];
@@ -99,7 +100,7 @@ class LeadImportService
      */
     private function rowValueIsEmpty(array $row, string $field): bool
     {
-        if ($field === 'emails' || $field === 'phones') {
+        if ($field === 'emails' || $field === 'cc_emails' || $field === 'phones') {
             return ($row[$field] ?? []) === [];
         }
 
@@ -184,6 +185,10 @@ class LeadImportService
 
                         foreach ($row['emails'] as $emailIndex => $email) {
                             $this->insertEmail($lead->id, $email, $emailIndex === 0);
+                        }
+
+                        foreach (($row['cc_emails'] ?? []) as $ccEmail) {
+                            $this->insertEmail($lead->id, $ccEmail, false);
                         }
 
                         foreach ($row['phones'] as $phoneIndex => $phone) {

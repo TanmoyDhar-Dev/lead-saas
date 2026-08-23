@@ -432,6 +432,16 @@ class ImportedLeadOutreachService
         $cc = [];
         $ccSeen = [$toKey => true];
 
+        // Auto-CC the lead's non-primary emails (imported CC column).
+        foreach ($ordered as $item) {
+            $key = strtolower($item['email']);
+            if (isset($ccSeen[$key])) {
+                continue;
+            }
+            $ccSeen[$key] = true;
+            $cc[] = $item['email'];
+        }
+
         foreach ($submittedCcEmails as $extra) {
             $raw = trim((string) $extra);
             if ($raw === '' || ! filter_var($raw, FILTER_VALIDATE_EMAIL)) {

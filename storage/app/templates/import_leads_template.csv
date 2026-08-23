@@ -1,3 +1,3 @@
-Organization Name,MD/CEO,Salutation,Email,Cell/Phone,Address
-The ACME Laboratories Ltd.,Mr. Fahim Sinha,Bhai,sample.ceo@example.com,+880 17XX-XXXXXX,"Court de la ACME, 1/1, Kallayanpur, Dhaka"
-Aristopharma Ltd.,Ms. Example Contact,Apu,contact@example.com,+880 17XX-XXXXXX / +880 2-XXXXXXX,"Aristo Tower, 239 Bir Uttam Mir Shawkat Road, Dhaka"
+Organization Name,MD/CEO,Salutation,Email,CC,Cell/Phone,Address
+The ACME Laboratories Ltd.,Mr. Fahim Sinha,Bhai,sample.ceo@example.com,assistant@example.com,+880 17XX-XXXXXX,"Court de la ACME, 1/1, Kallayanpur, Dhaka"
+Aristopharma Ltd.,Ms. Example Contact,Apu,contact@example.com,"cc1@example.com, cc2@example.com",+880 17XX-XXXXXX / +880 2-XXXXXXX,"Aristo Tower, 239 Bir Uttam Mir Shawkat Road, Dhaka"

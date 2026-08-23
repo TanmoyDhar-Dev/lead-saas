@@ -22,6 +22,7 @@ class SpreadsheetParser
         'contact_name' => ['md/ceo', 'md / ceo', 'ceo', 'md', 'name', 'full name', 'contact', 'contact name'],
         'salutation' => ['salutation', 'greeting', 'title', 'honorific', 'bhai/apu', 'bhai / apu', 'bhai', 'apu', 'bro'],
         'emails' => ['email', 'emails', 'e-mail', 'e-mails', 'email address', 'email addresses'],
+        'cc_emails' => ['cc', 'cc email', 'cc emails', 'cc e-mail', 'secondary email', 'secondary emails', 'other email', 'other emails'],
         'phones' => ['cell/phone', 'cell / phone', 'cell', 'phone', 'phones', 'mobile', 'telephone'],
         'address' => ['address', 'company address', 'location'],
     ];
@@ -107,6 +108,7 @@ class SpreadsheetParser
             'contact_name' => null,
             'salutation' => null,
             'emails' => null,
+            'cc_emails' => null,
             'phones' => null,
             'address' => null,
         ];
@@ -151,6 +153,7 @@ class SpreadsheetParser
         };
 
         $emailResult = $this->sanitizer->extractEmailsDetailed($get($map['emails']));
+        $ccResult = $this->sanitizer->extractEmailsDetailed($get($map['cc_emails']));
 
         return [
             'organization_name' => $this->sanitizer->cleanText($get($map['organization_name'])),
@@ -158,6 +161,8 @@ class SpreadsheetParser
             'salutation' => $this->sanitizer->cleanText($get($map['salutation'])),
             'emails' => $emailResult['emails'],
             'invalid_emails' => $emailResult['invalid'],
+            'cc_emails' => $ccResult['emails'],
+            'invalid_cc_emails' => $ccResult['invalid'],
             'phones' => $this->sanitizer->extractPhones($get($map['phones'])),
             'address' => $this->sanitizer->cleanText($get($map['address'])),
         ];
