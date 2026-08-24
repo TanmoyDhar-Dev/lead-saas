@@ -3,7 +3,9 @@
 .env
 .env.backup
 .env.docker
+.env.cpanel
 .env.production
+/deploy/cpanel/dist/
 .phpactor.json
 .phpunit.result.cache
 /.github

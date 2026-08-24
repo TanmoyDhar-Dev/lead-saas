@@ -13,6 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         apiPrefix: '',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // cPanel / reverse proxies terminate HTTPS in front of PHP.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'active_user' => \App\Http\Middleware\EnsureUserIsActive::class,

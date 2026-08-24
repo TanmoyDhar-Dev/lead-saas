@@ -1,0 +1,6 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Force all web traffic into Laravel's public/ folder (cPanel document root = project root).
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
