@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -10,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('leads', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             
             //Foreign keys 
             $table->foreignId('user_id')->nullable()->index()->constrained('users')->nullOnDelete();
@@ -22,13 +21,13 @@ return new class extends Migration
             $table->text('position')->nullable();  
             $table->text('address')->nullable();
             $table->text('bio')->nullable();
-            $table->text('linkedin_url')->nullable()->unique();
+            $table->string('linkedin_url', 512)->nullable()->unique();
             $table->string('personal_email')->nullable()->index(); 
             $table->string('company_email')->nullable()->index(); 
             
             // Company Info
             $table->string('industry')->nullable();
-            $table->text('company_name')->nullable()->index(); 
+            $table->string('company_name')->nullable()->index();
             $table->string('company_website')->nullable();
             $table->text('company_linkedin')->nullable();
             $table->string('company_city')->nullable();
