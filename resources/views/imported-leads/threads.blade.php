@@ -70,6 +70,9 @@
                                      x-text="msg.direction === 'outbound'
                                         ? ('To: ' + (msg.to_email || '—'))
                                         : ('From: ' + (msg.from_email || '—'))"></div>
+                                <div class="text-[11px] mb-1 text-blue-100"
+                                     x-show="msg.direction === 'outbound' && (msg.cc_emails || []).length"
+                                     x-text="'Cc: ' + (msg.cc_emails || []).join(', ')"></div>
                                 <div class="text-xs font-bold mb-2"
                                      :class="msg.direction === 'outbound' ? 'text-white' : 'text-slate-800'"
                                      x-text="msg.subject || '(No subject)'"></div>

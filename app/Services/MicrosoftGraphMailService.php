@@ -134,6 +134,7 @@ class MicrosoftGraphMailService
     /**
      * Create a threaded reply draft from an existing Graph message, set body, and send.
      *
+     * @param  list<string>  $ccEmails
      * @return array{
      *     successful: bool,
      *     status: int|null,
@@ -144,8 +145,14 @@ class MicrosoftGraphMailService
      *     subject: string|null
      * }
      */
-    public function replyToMessage(string $accessToken, string $graphMessageId, string $htmlBody): array
-    {
+    public function replyToMessage(
+        string $accessToken,
+        string $graphMessageId,
+        string $htmlBody,
+        ?string $toEmail = null,
+        array $ccEmails = [],
+        bool $forceTo = false,
+    ): array {
         $created = $this->request(
             $accessToken,
             'https://graph.microsoft.com/v1.0/me/messages/'.rawurlencode($graphMessageId).'/createReply',
@@ -180,15 +187,31 @@ class MicrosoftGraphMailService
             ];
         }
 
+        $patchPayload = [
+            'body' => [
+                'contentType' => 'HTML',
+                'content' => $htmlBody,
+            ],
+        ];
+
+        $normalizedTo = is_string($toEmail) ? trim($toEmail) : '';
+        if ($forceTo && $normalizedTo !== '' && filter_var($normalizedTo, FILTER_VALIDATE_EMAIL)) {
+            $patchPayload['toRecipients'] = [[
+                'emailAddress' => [
+                    'address' => $normalizedTo,
+                ],
+            ]];
+        }
+
+        $cc = $this->normalizeCcRecipients($ccEmails, $normalizedTo);
+        if ($cc !== []) {
+            $patchPayload['ccRecipients'] = $cc;
+        }
+
         $patched = $this->patch(
             $accessToken,
             'https://graph.microsoft.com/v1.0/me/messages/'.rawurlencode($draftId),
-            [
-                'body' => [
-                    'contentType' => 'HTML',
-                    'content' => $htmlBody,
-                ],
-            ]
+            $patchPayload
         );
 
         if (! $patched['successful']) {
@@ -307,6 +330,42 @@ class MicrosoftGraphMailService
         }
 
         return $normalized;
+    }
+
+    /**
+     * @param  list<string>  $ccEmails
+     * @return list<array{emailAddress: array{address: string}}>
+     */
+    private function normalizeCcRecipients(array $ccEmails, string $excludeTo = ''): array
+    {
+        $excludeKey = strtolower(trim($excludeTo));
+        $seen = $excludeKey !== '' ? [$excludeKey => true] : [];
+        $recipients = [];
+
+        foreach ($ccEmails as $email) {
+            if (! is_string($email)) {
+                continue;
+            }
+
+            $address = trim($email);
+            if ($address === '' || ! filter_var($address, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+
+            $key = strtolower($address);
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $recipients[] = [
+                'emailAddress' => [
+                    'address' => $address,
+                ],
+            ];
+        }
+
+        return $recipients;
     }
 
     /**

@@ -96,6 +96,7 @@ class ProcessBulkReplyJob implements ShouldQueue
 
         $originalGraphMessageId = $replyTarget['graph_message_id'];
         $forceRecipients = $replyTarget['force_recipients'];
+        $deliveredToEmail = $replyTarget['reply_to_email'] ?? $toEmail;
 
         if (! filled($this->recipient->tracking_id)) {
             $this->recipient->forceFill([
@@ -142,6 +143,7 @@ class ProcessBulkReplyJob implements ShouldQueue
                     );
                     $originalGraphMessageId = $resolvedTarget['graph_message_id'];
                     $forceRecipients = $resolvedTarget['force_recipients'];
+                    $deliveredToEmail = $resolvedTarget['reply_to_email'] ?? $toEmail;
                 } catch (GraphRateLimitedException $throttled) {
                     $this->releaseAfterThrottle($throttled->retryAfterSeconds);
 
@@ -204,6 +206,7 @@ class ProcessBulkReplyJob implements ShouldQueue
         $this->recipient->update([
             'status' => 'sent',
             'graph_message_id' => $draftId,
+            'to_email' => $deliveredToEmail !== '' ? $deliveredToEmail : $this->recipient->to_email,
             'subject' => $childOutreach->subject_template,
             'final_body' => $htmlBody,
             'sent_at' => now(),
@@ -222,7 +225,7 @@ class ProcessBulkReplyJob implements ShouldQueue
     }
 
     /**
-     * @return array{graph_message_id: string, force_recipients: bool}|null
+     * @return array{graph_message_id: string, force_recipients: bool, reply_to_email: ?string}|null
      */
     private function resolveReplyTarget(
         MicrosoftGraphMailService $graphMail,
@@ -241,9 +244,14 @@ class ProcessBulkReplyJob implements ShouldQueue
             : '';
 
         if ($inboundGraphId !== '') {
+            $inboundFrom = is_string($latestInbound?->from_email)
+                ? trim($latestInbound->from_email)
+                : '';
+
             return [
                 'graph_message_id' => $inboundGraphId,
                 'force_recipients' => false,
+                'reply_to_email' => $inboundFrom !== '' ? $inboundFrom : null,
             ];
         }
 
@@ -262,9 +270,14 @@ class ProcessBulkReplyJob implements ShouldQueue
         }
 
         // createReply on a Sent Items message replies to its sender (you). Override To to the lead.
+        $parentTo = is_string($parentRecipient->to_email)
+            ? trim($parentRecipient->to_email)
+            : '';
+
         return [
             'graph_message_id' => $sentGraphId,
             'force_recipients' => true,
+            'reply_to_email' => $parentTo !== '' ? $parentTo : null,
         ];
     }
 
@@ -393,21 +406,32 @@ class ProcessBulkReplyJob implements ShouldQueue
                     'address' => $toEmail,
                 ],
             ]];
+        }
 
-            $cc = array_values(array_filter(
-                $ccEmails,
-                fn ($email) => is_string($email) && trim($email) !== '' && strtolower(trim($email)) !== strtolower($toEmail)
-            ));
+        // Always re-apply stored CC so imported / form CC survives both inbound and Sent Items replies.
+        $cc = array_values(array_filter(
+            $ccEmails,
+            fn ($email) => is_string($email)
+                && trim($email) !== ''
+                && filter_var(trim($email), FILTER_VALIDATE_EMAIL)
+                && strtolower(trim($email)) !== strtolower($toEmail)
+        ));
 
-            if ($cc !== []) {
-                $patchPayload['ccRecipients'] = array_map(
-                    fn (string $email) => [
-                        'emailAddress' => [
-                            'address' => trim($email),
-                        ],
+        if ($cc !== []) {
+            $seen = [];
+            $patchPayload['ccRecipients'] = [];
+            foreach ($cc as $email) {
+                $address = trim($email);
+                $key = strtolower($address);
+                if (isset($seen[$key])) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $patchPayload['ccRecipients'][] = [
+                    'emailAddress' => [
+                        'address' => $address,
                     ],
-                    $cc
-                );
+                ];
             }
         }
 

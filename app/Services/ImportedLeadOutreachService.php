@@ -315,7 +315,23 @@ class ImportedLeadOutreachService
         $trackingId = (string) Str::uuid();
         $html = EmailTracking::appendToHtml($html, $trackingId);
 
-        $graphResult = $this->graphMail->replyToMessage($accessToken, $graphMessageId, $html);
+        $toEmail = is_string($sourceRecipient->to_email) ? trim($sourceRecipient->to_email) : '';
+        $ccEmails = is_array($sourceRecipient->cc_emails) ? $sourceRecipient->cc_emails : [];
+        // createReply on a Sent Items message replies to its sender (you). Force To back to the lead.
+        $forceTo = $latestInbound === null
+            || ! is_string($latestInbound->graph_message_id)
+            || $latestInbound->graph_message_id === '';
+
+        $delivery = $this->resolveReplyDeliveryAddresses($toEmail, $ccEmails, $latestInbound, $forceTo);
+
+        $graphResult = $this->graphMail->replyToMessage(
+            $accessToken,
+            $graphMessageId,
+            $html,
+            $delivery['to'] !== '' ? $delivery['to'] : null,
+            $delivery['cc'],
+            $forceTo,
+        );
 
         if (! $graphResult['successful']) {
             return [
@@ -335,8 +351,8 @@ class ImportedLeadOutreachService
             'tracking_id' => $trackingId,
             'graph_message_id' => $graphResult['graph_message_id'] ?? null,
             'message_id' => $graphResult['internet_message_id'] ?? null,
-            'to_email' => $sourceRecipient->to_email,
-            'cc_emails' => is_array($sourceRecipient->cc_emails) ? $sourceRecipient->cc_emails : null,
+            'to_email' => $delivery['to'] !== '' ? $delivery['to'] : $sourceRecipient->to_email,
+            'cc_emails' => $delivery['cc'] !== [] ? $delivery['cc'] : null,
             'subject' => $subject,
             'final_body' => $html,
             'status' => 'sent',
@@ -358,6 +374,59 @@ class ImportedLeadOutreachService
         }
 
         return preg_match('/^re:/i', $subject) === 1 ? $subject : 'Re: '.$subject;
+    }
+
+    /**
+     * Resolve the To/CC addresses actually delivered on a threaded reply.
+     *
+     * @param  list<string>  $ccEmails
+     * @return array{to: string, cc: list<string>}
+     */
+    private function resolveReplyDeliveryAddresses(
+        string $primaryToEmail,
+        array $ccEmails,
+        ?object $latestInbound,
+        bool $forceTo,
+    ): array {
+        $primaryTo = trim($primaryToEmail);
+        $inboundFrom = is_string($latestInbound?->from_email ?? null)
+            ? trim($latestInbound->from_email)
+            : '';
+
+        $actualTo = ($forceTo && $primaryTo !== '')
+            ? $primaryTo
+            : ($inboundFrom !== '' ? $inboundFrom : $primaryTo);
+
+        $cc = [];
+        $seen = [];
+        $toKey = strtolower($actualTo);
+        if ($toKey !== '') {
+            $seen[$toKey] = true;
+        }
+
+        foreach ($ccEmails as $email) {
+            if (! is_string($email)) {
+                continue;
+            }
+
+            $address = trim($email);
+            if ($address === '' || ! filter_var($address, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+
+            $key = strtolower($address);
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $cc[] = $address;
+        }
+
+        return [
+            'to' => $actualTo,
+            'cc' => $cc,
+        ];
     }
 
     public function buildSignatureHtml(

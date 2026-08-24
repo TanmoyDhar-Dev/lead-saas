@@ -375,12 +375,16 @@ class ImportedLeadController extends Controller
             $isUserReply = $firstOutboundId !== null && (string) $recipient->id !== (string) $firstOutboundId;
 
             if ($recipient->final_body || in_array($recipient->status, ['sent', 'drafted', 'failed'], true)) {
+                $displayTo = $this->resolveOutboundDisplayTo($recipient, $isUserReply, $importedLead);
+                $displayCc = is_array($recipient->cc_emails) ? array_values($recipient->cc_emails) : [];
+
                 $thread->push([
                     'id' => 'out-'.$recipient->id,
                     'direction' => 'outbound',
                     'label' => $isUserReply ? 'Sent by You' : 'Sent by System',
                     'from_email' => null,
-                    'to_email' => $recipient->to_email,
+                    'to_email' => $displayTo,
+                    'cc_emails' => $displayCc,
                     'subject' => $recipient->subject,
                     'status' => $recipient->status,
                     'body_html' => $this->sanitizeEmailHtml($recipient->final_body),
@@ -443,6 +447,42 @@ class ImportedLeadController extends Controller
             })
             ->values()
             ->all();
+    }
+
+    private function resolveOutboundDisplayTo(
+        ImportedOutreachRecipient $recipient,
+        bool $isUserReply,
+        ImportedLead $importedLead,
+    ): ?string {
+        if (! $isUserReply) {
+            return $recipient->to_email;
+        }
+
+        $outboundAt = $recipient->sent_at ?? $recipient->drafted_at ?? $recipient->created_at;
+        $outboundTs = $this->threadSortTimestamp($outboundAt);
+
+        $latestInbound = $importedLead->outreachRecipients
+            ->flatMap(fn (ImportedOutreachRecipient $r) => $r->inboundMessages)
+            ->filter(function ($inbound) use ($outboundTs) {
+                $graphId = is_string($inbound->graph_message_id ?? null)
+                    ? trim($inbound->graph_message_id)
+                    : '';
+                if ($graphId === '') {
+                    return false;
+                }
+
+                $inboundTs = $this->threadSortTimestamp($inbound->received_at ?? $inbound->created_at);
+
+                return $inboundTs <= $outboundTs;
+            })
+            ->sortByDesc(fn ($inbound) => $this->threadSortTimestamp($inbound->received_at ?? $inbound->created_at))
+            ->first();
+
+        if ($latestInbound && is_string($latestInbound->from_email) && trim($latestInbound->from_email) !== '') {
+            return trim($latestInbound->from_email);
+        }
+
+        return $recipient->to_email;
     }
 
     /**
