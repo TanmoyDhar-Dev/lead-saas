@@ -36,5 +36,5 @@ php artisan view:cache --no-interaction
 echo ""
 echo "Post-deploy complete."
 echo "Add these cron jobs in cPanel → Cron Jobs (use your real PHP path and home path):"
-echo "  * * * * * cd /home/USER/saas-leadflow && /usr/local/bin/php artisan schedule:run >> /dev/null 2>&1"
-echo "  * * * * * cd /home/USER/saas-leadflow && /usr/local/bin/php artisan queue:work --stop-when-empty --max-time=50 --tries=3 >> /dev/null 2>&1"
+echo "  * * * * * cd /home/egenerat/lead-saas && /usr/local/bin/php artisan schedule:run >> /home/egenerat/lead-saas/storage/logs/ms-graph.log 2>&1"
+echo "  * * * * * cd /home/egenerat/lead-saas && /usr/local/bin/php artisan queue:work --stop-when-empty --max-time=50 --tries=3 >> /home/egenerat/lead-saas/storage/logs/queue.log 2>&1"
