@@ -3,6 +3,118 @@
 This app can run on **cPanel with SSH + PHP 8.3**, but it is a compromise vs Docker/VM.
 Shared hosts without SSH, Postgres (`pdo_pgsql`), or cron will **not** run outreach queues / Graph webhooks correctly.
 
+Use the **`cpanel` branch** on GitHub for production cPanel deployments.
+
+---
+
+## Deploy from GitHub (recommended)
+
+### Your workflow
+
+```text
+main (development)  →  merge to cpanel  →  cPanel pulls / deploys cpanel branch
+```
+
+1. Develop on `main` (or feature branches).
+2. When ready for production, merge into `cpanel`:
+
+```bash
+git checkout cpanel
+git merge main
+git push origin cpanel
+```
+
+3. On cPanel, **Pull** or **Deploy HEAD Commit** (see below).
+
+### One-time cPanel setup (Git Version Control)
+
+1. cPanel → **Git Version Control** → **Create**
+2. Clone URL:
+
+```text
+https://github.com/TanmoyDhar-Dev/lead-saas.git
+```
+
+3. **Repository Path:** e.g. `/home/USER/lead-saas` (outside `public_html` is fine)
+4. **Branch:** `cpanel` (not `main`)
+5. Click **Create**
+
+**Point the site at Laravel:**
+
+- **Option A (recommended):** cPanel → **Domains** → document root → `/home/USER/lead-saas/public`
+- **Option B:** Clone into `public_html`; root `.htaccess` sends traffic to `public/`
+
+**Create `.env` on the server only** (never commit):
+
+```bash
+cd ~/lead-saas
+cp .env.cpanel.example .env
+nano .env   # set APP_URL, DB, Azure, n8n, etc.
+php artisan key:generate
+chmod -R 775 storage bootstrap/cache
+```
+
+First deploy (SSH or Terminal):
+
+```bash
+cd ~/lead-saas
+composer install --no-dev --optimize-autoloader
+sh deploy/cpanel/post-deploy.sh
+```
+
+Add cron jobs (see Step 6 below).
+
+### Every update from GitHub
+
+**Option 1 — cPanel UI**
+
+1. Git Version Control → **Manage** your repo
+2. **Update from Remote** (pull latest `cpanel`)
+3. **Deploy HEAD Commit** — runs `.cpanel.yml` (composer + migrate + cache)
+
+**Option 2 — SSH**
+
+```bash
+cd ~/lead-saas
+git pull origin cpanel
+composer install --no-dev --optimize-autoloader --no-interaction
+php artisan migrate --force
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+Or:
+
+```bash
+sh deploy/cpanel/post-deploy.sh
+```
+
+### What is in Git vs built on server
+
+| Item | In Git (`cpanel` branch) | On server after deploy |
+|---|---|---|
+| Source code | Yes | Pulled from GitHub |
+| `public/build` (CSS/JS) | Yes (committed) | From Git |
+| `vendor/` | No (gitignored) | `composer install` |
+| `.env` | No (gitignored) | You create once on server |
+| `node_modules/` | No | Not needed on server |
+
+After changing frontend (Vite), on your PC:
+
+```bash
+npm run build
+git add public/build
+git commit -m "Build assets for cPanel"
+git push origin cpanel
+```
+
+---
+
+## Manual zip upload (alternative)
+
+If Git is not available on your host, use the zip method below.
+
 ## Requirements (check in cPanel first)
 
 - PHP **8.3+** (MultiPHP Manager)
@@ -152,9 +264,9 @@ Open:
 
 ## Updates later
 
-1. Rebuild zip on PC  
-2. Upload / overwrite files (keep server `.env` and `storage/`)  
-3. Run:
+**GitHub:** merge to `cpanel`, push, then Pull + Deploy on cPanel (or `git pull` + post-deploy script).
+
+**Zip:** rebuild zip, upload, then:
 
 ```bash
 php artisan migrate --force

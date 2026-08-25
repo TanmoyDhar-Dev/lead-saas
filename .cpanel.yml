@@ -1,0 +1,22 @@
+---
+# cPanel runs these tasks when you click "Deploy HEAD Commit"
+# (Git Version Control → Manage → Deploy). Tasks run from the repo root.
+# Branch to deploy: cpanel
+# Prerequisites on server: PHP 8.3+, Composer, .env file (never commit secrets)
+
+deployment:
+  tasks:
+    - /bin/echo "==> Installing PHP dependencies..."
+    - composer install --no-dev --optimize-autoloader --no-interaction
+
+    - /bin/echo "==> Fixing permissions..."
+    - /bin/chmod -R 775 storage bootstrap/cache
+
+    - /bin/echo "==> Laravel post-deploy..."
+    - php artisan storage:link --force --no-interaction || true
+    - php artisan migrate --force --no-interaction
+    - php artisan config:cache --no-interaction
+    - php artisan route:cache --no-interaction
+    - php artisan view:cache --no-interaction
+
+    - /bin/echo "Deploy finished."
