@@ -309,11 +309,22 @@
                             <div>
                                 <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">CC</label>
                                 <input type="text"
+                                       readonly
+                                       :value="outreachCcPreview()"
+                                       :title="outreachCcPreview()"
+                                       placeholder="No secondary emails on selected leads"
+                                       class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm text-slate-700 focus:ring-0 focus:border-slate-200 py-3 px-4 cursor-default">
+                                <p class="text-[10px] text-slate-400 mt-1">Per lead from import · each recipient only gets their own secondary emails</p>
+                            </div>
+
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Additional CC (all recipients)</label>
+                                <input type="text"
                                        name="cc_emails"
                                        x-model="outreachForm.cc_emails"
-                                       placeholder="cc@example.com, another@example.com"
+                                       placeholder="optional@example.com"
                                        class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm focus:ring-brand-blue focus:border-brand-blue py-3 px-4">
-                                {{-- <p class="text-[10px] text-slate-400 mt-1">Pre-filled from lead secondary emails · edit or add more (comma-separated)</p> --}}
+                                <p class="text-[10px] text-slate-400 mt-1">Optional comma-separated addresses added to every email</p>
                             </div>
 
                             <div>
@@ -706,7 +717,7 @@
                     }
                     this.cacheVisibleSelectedLeads();
                     this.outreachFiles = [];
-                    this.outreachForm.cc_emails = this.outreachCcPreview();
+                    this.outreachForm.cc_emails = '';
                     this.outreachOpen = true;
                 },
 

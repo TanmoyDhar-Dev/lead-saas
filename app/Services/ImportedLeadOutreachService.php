@@ -453,8 +453,8 @@ class ImportedLeadOutreachService
     }
 
     /**
-     * Resolve To from the lead, and CC from the campaign form submission.
-     * Submitted CCs are sanitized, deduped, and must not include the To address.
+     * Resolve To from the lead primary email, CC from non-primary emails on that lead,
+     * plus optional extra CCs submitted on the outreach form (applied to every recipient).
      *
      * @param  list<string>  $submittedCcEmails
      * @return array{to: string, cc: list<string>}|null
@@ -501,16 +501,22 @@ class ImportedLeadOutreachService
         $cc = [];
         $ccSeen = [$toKey => true];
 
-        // Auto-CC the lead's non-primary emails (imported CC column).
+        // Auto-CC this lead's non-primary emails (imported secondary column).
         foreach ($ordered as $item) {
+            if ($item['is_primary']) {
+                continue;
+            }
+
             $key = strtolower($item['email']);
             if (isset($ccSeen[$key])) {
                 continue;
             }
+
             $ccSeen[$key] = true;
             $cc[] = $item['email'];
         }
 
+        // Optional extra CCs from the form — applied to every recipient in the batch.
         foreach ($submittedCcEmails as $extra) {
             $raw = trim((string) $extra);
             if ($raw === '' || ! filter_var($raw, FILTER_VALIDATE_EMAIL)) {
