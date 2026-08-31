@@ -365,11 +365,54 @@
                         </div>
 
                         <div class="p-4 md:p-6 border-t border-slate-200 bg-white flex justify-end gap-3 shrink-0">
+                            <button type="button"
+                                    @click="openSaveTemplateModal()"
+                                    class="px-6 py-2.5 text-sm font-bold text-brand-blue bg-blue-50 rounded-xl hover:bg-blue-100 border border-blue-100">
+                                Save as Template
+                            </button>
                             <button type="button" @click="outreachOpen = false" class="px-6 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200">Cancel</button>
                             <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white bg-brand-blue rounded-xl hover:bg-blue-600 shadow-lg shadow-blue-500/30">Send Outreach</button>
                         </div>
                     </form>
                 </div>
+            </div>
+        </div>
+
+        {{-- Save as Template modal (from Selected Leads outreach) --}}
+        <div x-show="saveTemplateOpen" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center p-4" @keydown.escape.window="closeSaveTemplateModal()">
+            <div @click="closeSaveTemplateModal()" class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative z-10 overflow-hidden" @click.stop>
+                <div class="p-6 border-b border-slate-100">
+                    <h3 class="text-lg font-bold text-slate-800">Save as Template</h3>
+                    <p class="text-sm text-slate-500 mt-1">Save the current subject, body, and signature for reuse in future campaigns.</p>
+                </div>
+                <form @submit.prevent="saveOutreachAsTemplate()" class="p-6 space-y-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Template Name *</label>
+                        <input type="text"
+                               x-model="saveTemplateName"
+                               required
+                               maxlength="255"
+                               placeholder="e.g. Initial Outreach v1"
+                               class="w-full bg-slate-50 border-slate-200 rounded-xl text-sm py-3 px-4 focus:ring-brand-blue focus:border-brand-blue"
+                               :class="saveTemplateError ? 'border-rose-300 ring-1 ring-rose-200' : ''">
+                        <p x-show="saveTemplateError" x-text="saveTemplateError" class="text-xs font-semibold text-rose-600 mt-2"></p>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button type="button"
+                                @click="closeSaveTemplateModal()"
+                                class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                :disabled="saveTemplateSaving || !saveTemplateName.trim()"
+                                :class="saveTemplateSaving || !saveTemplateName.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'"
+                                class="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-brand-blue shadow-lg shadow-blue-500/20">
+                            <span x-show="!saveTemplateSaving">Save Template</span>
+                            <span x-show="saveTemplateSaving">Saving…</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -540,6 +583,10 @@
                 selectedLeadsCache: {},
                 selectAll: false,
                 outreachOpen: false,
+                saveTemplateOpen: false,
+                saveTemplateName: '',
+                saveTemplateSaving: false,
+                saveTemplateError: '',
                 outlookConnected: @json($outlookConnected),
                 templatesData: @json($templates ?? []),
                 selectedTemplate: '',
@@ -718,7 +765,99 @@
                     this.cacheVisibleSelectedLeads();
                     this.outreachFiles = [];
                     this.outreachForm.cc_emails = '';
+                    this.saveTemplateOpen = false;
+                    this.saveTemplateName = '';
+                    this.saveTemplateError = '';
                     this.outreachOpen = true;
+                },
+
+                openSaveTemplateModal() {
+                    const subject = (this.outreachForm.subject || '').trim();
+                    const body = (this.outreachForm.body || '').trim();
+
+                    if (!subject || !body) {
+                        window.toast?.warning('Add an email subject and body before saving as a template.');
+                        return;
+                    }
+
+                    this.saveTemplateName = '';
+                    this.saveTemplateError = '';
+                    this.saveTemplateOpen = true;
+                },
+
+                closeSaveTemplateModal() {
+                    if (this.saveTemplateSaving) {
+                        return;
+                    }
+
+                    this.saveTemplateOpen = false;
+                    this.saveTemplateName = '';
+                    this.saveTemplateError = '';
+                },
+
+                async saveOutreachAsTemplate() {
+                    const name = (this.saveTemplateName || '').trim();
+                    if (!name) {
+                        this.saveTemplateError = 'Template name is required.';
+                        return;
+                    }
+
+                    const subject = (this.outreachForm.subject || '').trim();
+                    const body = (this.outreachForm.body || '').trim();
+                    if (!subject || !body) {
+                        this.saveTemplateError = 'Subject and body are required.';
+                        return;
+                    }
+
+                    this.saveTemplateSaving = true;
+                    this.saveTemplateError = '';
+
+                    try {
+                        const response = await fetch(@js(route('templates.store-from-outreach')), {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            },
+                            body: JSON.stringify({
+                                name,
+                                subject,
+                                body,
+                                signature_name: (this.outreachForm.sender_name || '').trim() || null,
+                                signature_position: (this.outreachForm.sender_role || '').trim() || null,
+                                signature_company: (this.outreachForm.sender_company || '').trim() || null,
+                                signature_address: (this.outreachForm.sender_address || '').trim() || null,
+                            }),
+                        });
+
+                        const data = await response.json().catch(() => ({}));
+
+                        if (!response.ok) {
+                            const nameError = data?.errors?.name?.[0];
+                            this.saveTemplateError = nameError || data?.message || 'Could not save template.';
+                            return;
+                        }
+
+                        const template = data.template;
+                        if (template) {
+                            const exists = this.templatesData.some((t) => String(t.id) === String(template.id));
+                            if (!exists) {
+                                this.templatesData = [...this.templatesData, template];
+                            }
+                            this.selectedTemplate = template.id;
+                        }
+
+                        this.saveTemplateSaving = false;
+                        this.saveTemplateOpen = false;
+                        this.saveTemplateName = '';
+                        this.saveTemplateError = '';
+                        window.toast?.success(data.message || 'Template saved successfully.');
+                    } catch (error) {
+                        this.saveTemplateError = 'Could not save template. Please try again.';
+                    } finally {
+                        this.saveTemplateSaving = false;
+                    }
                 },
 
                 applyTemplate() {

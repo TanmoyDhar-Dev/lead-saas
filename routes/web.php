@@ -71,6 +71,7 @@ Route::middleware(['auth', 'verified', 'active_user'])->group(function () {
     Route::get('/templates', [\App\Http\Controllers\TemplateController::class, 'index'])->name('templates.index');
     Route::get('/templates/create', [\App\Http\Controllers\TemplateController::class, 'create'])->name('templates.create');
     Route::post('/templates', [\App\Http\Controllers\TemplateController::class, 'store'])->name('templates.store');
+    Route::post('/templates/from-outreach', [\App\Http\Controllers\TemplateController::class, 'storeFromOutreach'])->name('templates.store-from-outreach');
     Route::get('/templates/{id}/edit', [\App\Http\Controllers\TemplateController::class, 'edit'])->name('templates.edit');
     Route::put('/templates/{id}', [\App\Http\Controllers\TemplateController::class, 'update'])->name('templates.update');
     Route::post('/templates/{id}/default', [\App\Http\Controllers\TemplateController::class, 'setDefault'])->name('templates.default');
