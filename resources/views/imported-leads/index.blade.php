@@ -813,7 +813,7 @@
                     this.saveTemplateError = '';
 
                     try {
-                        const response = await fetch(@js(route('templates.store-from-outreach')), {
+                        const response = await fetch(@js(url('/templates/from-outreach')), {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',

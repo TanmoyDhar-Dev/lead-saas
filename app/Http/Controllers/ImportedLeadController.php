@@ -102,7 +102,7 @@ class ImportedLeadController extends Controller
         $templateQuery = \App\Models\EmailTemplate::query();
         if (! $user->isAdmin()) {
             $templateQuery->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)->orWhere('is_system_sample', 'true');
+                $q->where('user_id', $user->id)->orWhereRaw('is_system_sample = true');
             });
         }
         $templates = $templateQuery->orderByDesc('is_default')->get();
